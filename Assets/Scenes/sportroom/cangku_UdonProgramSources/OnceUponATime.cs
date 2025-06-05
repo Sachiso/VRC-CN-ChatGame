@@ -393,7 +393,10 @@ public class OnceUponATime : UdonSharpBehaviour
     }
     private VRCPlayerApi GetOwn()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject))
+        {
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        }
         return Networking.LocalPlayer;
     }
     public void Selectminecard0() { SetminecardForSelect(0); }
