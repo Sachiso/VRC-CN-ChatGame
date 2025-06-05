@@ -1,5 +1,7 @@
+地图链接：  
+https://vrchat.com/home/world/wrld_ca243cbd-60f2-4e5c-aa31-e5ef8b304c84  
 简单说明：  
-这是一个VRC世界的工程文件  
+这是一个VRC世界的工程文件主要分享实现代码  
 代码的目录在Assets\Scenes\sportroom\cangku_UdonProgramSources  
 psd和png文件没有上传，不用找了  
 用到的插件和素材有：  
