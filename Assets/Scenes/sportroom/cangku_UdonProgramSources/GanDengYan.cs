@@ -1,6 +1,4 @@
 ﻿
-using System;
-using System.Diagnostics.Eventing.Reader;
 using TMPro;
 using UdonSharp;
 using UnityEngine;
@@ -11,50 +9,69 @@ using VRC.Udon;
 enum pukestate { None,One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom,}
 public class GanDengYan : UdonSharpBehaviour
 {
+    //玩家手牌和展示牌相关的UI元素
     public Image[] minecards;
     public Image[] copytoMinecards;
     public Image[] showcards;
     public Image[] copytoShowcards;
     public TextMeshProUGUI[] playersNameforCard;
     public TextMeshProUGUI[] copytoPlayersNameforCard;
-    //以上是玩家手牌和展示牌相关的UI元素
+    //玩家信息相关的UI元素
     public TextMeshProUGUI[] playersInGame;
     public TextMeshProUGUI[] copytoPlayersInGame;
     public TextMeshProUGUI[] playersScore;
     public TextMeshProUGUI[] copytoPlayersScore;
     public TextMeshProUGUI[] playersCardCount;
     public TextMeshProUGUI[] copytoPlayersCardCount;
-    //以上是玩家信息相关的UI元素
+    /// <summary>
+    /// 存储所有卡牌的外部图片数组
+    /// </summary>
     public Image[] allpuke;
-    public TextMeshProUGUI usingPN;
+    public TextMeshProUGUI usingPN;//当前使用的玩家名称
     public TextMeshProUGUI copytoUingPN;
     public Image nullimage;
-    [UdonSynced] private string[] PlayersName = new string[8];//玩家名称
-    [UdonSynced] private int[] PlayersScore = new int[8];//玩家分数
-    [UdonSynced] private int[] PlayersCardCount = new int[8];//玩家手牌数量
-    [UdonSynced] private int PlayersCount = 0;//玩家数量
-    private int MineCardsCount;//自身象选择卡牌数
-    private int[] MyCardsID = new int[6];//用于存储玩家手牌ID
-    private int[] MySelectCardsID = new int[6];//用于存储玩家选择的卡牌ID
-    [UdonSynced] private int[] AllCardsID = new int[108];//所有卡牌ID,用于乱序索引，id指向allpuke数组
-    [UdonSynced] private int Cardscount = 107;//剩余卡牌数
-    [UdonSynced] private int[] PlayersPukeNub = new int[0];//玩家吐牌数字，用作对比,动态变化
-    [UdonSynced] private int[] ShowPukeID = new int[6];//展示牌ID索引，索引到allpuke数组
-    [UdonSynced] private pukestate ShowPukeType;//展示牌类型
-    [UdonSynced] private string[] ShowPukePN = new string[6];//展示牌的玩家名称
-    [UdonSynced] private int UsingPNid;//当前使用的玩家名称在 PlayersName 数组中的索引
+    /// <summary>玩家列表名称</summary>
+    [UdonSynced] private string[] PlayersName = new string[8];
+    /// <summary>玩家列表分数</summary>
+    [UdonSynced] private int[] PlayersScore = new int[8];
+    /// <summary>玩家手牌数量</summary>
+    [UdonSynced] private int[] PlayersCardCount = new int[8];
+    /// <summary>玩家数量</summary>
+    [UdonSynced] private int PlayersCount = 0;
+    /// <summary>用于存储玩家手牌ID</summary>
+    private int[] MyCardsID = new int[6];
+    /// <summary>用于存储玩家选择的卡牌ID</summary>
+    private int[] MySelectCardsID = new int[6];
+    /// <summary>所有卡牌ID,用于乱序索引，id指向allpuke数组</summary>
+    [UdonSynced] private int[] AllCardsID = new int[108];
+    /// <summary>剩余卡牌数</summary>
+    [UdonSynced] private int Cardscount = 107;
+    /// <summary>玩家吐牌数字，用作对比,动态变化</summary>
+    [UdonSynced] private int[] PlayersPukeNub = new int[0];
+    /// <summary>展示牌ID索引，索引到allpuke数组</summary>
+    [UdonSynced] private int[] ShowPukeID = new int[6];
+    /// <summary>展示牌类型</summary>
+    [UdonSynced] private pukestate ShowPukeType;
+    /// <summary>展示牌的玩家名称</summary>
+    [UdonSynced] private string[] ShowPukePN = new string[6];
+    /// <summary>当前使用的玩家名称在 PlayersName 数组中的索引</summary>
+    [UdonSynced] private int UsingPNid;
+    /// <summary>用于锁定出牌按钮</summary>
     [UdonSynced] private bool GameOver = true;
+    /// <summary>判断新游戏初始化</summary>
     [UdonSynced] private bool IsNewGame = false;
+    /// <summary>判断加牌逻辑</summary>
     [UdonSynced] private bool IsAdd = false;
+    /// <summary>对玩家手牌进行初始化</summary>
+    [UdonSynced] private bool Reset = false;
     //以上是游戏数据相关的变量
     public GameObject[] JSbutton;
-    [UdonSynced] private bool ResetButton = true;//加入游戏按钮状态
     void Start()
     {
         if (!Networking.IsOwner(Networking.LocalPlayer, gameObject)) return;
-        for (int i = 0; i < 108; i++)
+        for (int i = 0; i < 108;)
         {
-            AllCardsID[i] = i;
+            AllCardsID[i] = i++;
         }
         ResetAll();
     }
@@ -80,7 +97,7 @@ public class GanDengYan : UdonSharpBehaviour
         }
     }
     
-    private pukestate GetPukeType(in int[] getTypeSave)
+    private pukestate GetPukeType(in int[] getTypeSave,pukestate PKstate)
     {
         int zerocount = 0;//记录0的数量
         int nubtypecount = 1;//记录数的数量
@@ -99,14 +116,15 @@ public class GanDengYan : UdonSharpBehaviour
             }//记录数的数量
         }
         //如果首位是2，我们重新排序一下，保证顺子判定的正确性
-        if (getspukenumber[0] == 2 && getspukenumber.Length > 1)
+        if (getspukenumber[0] == 15 && getspukenumber.Length > 1)
         {
-            for (int i = 0; i < getspukenumber.Length - 1; i++)
+            for (int i = 0; i < getspukenumber.Length - 1 - zerocount; i++)
+                if (getspukenumber[i] < 9) getspukenumber[i] += 13;//加倍判定长度，将比较范围重置到10-24
+            for (int i = 0; i < getspukenumber.Length - 1-zerocount; i++)
             {
-                for (int j = 0; j < getspukenumber.Length - 1 - i; j++)
+                for (int j = 0; j < getspukenumber.Length - 1 - zerocount - i; j++)
                 {
-                    if (getspukenumber[j] != 0 && getspukenumber[j] < 9) getspukenumber[j] += 13;//加倍判定长度，将比较范围重置到10-24
-                    if (getspukenumber[j] > getspukenumber[j + 1] && getspukenumber[j + 1] != 0)
+                    if (getspukenumber[j] > getspukenumber[j + 1])
                     {
                         int temp = getspukenumber[j];
                         getspukenumber[j] = getspukenumber[j + 1];
@@ -127,43 +145,59 @@ public class GanDengYan : UdonSharpBehaviour
                     return pukestate.Two;
                 return pukestate.None;
             case 3://三张一样的或顺子
-                if (nubtypecount == 1 && zerocount != 3)
-                    return pukestate.Three;
+                if (PKstate == pukestate.Three || PKstate == pukestate.None)
+                    if (nubtypecount == 1 && zerocount != 3)
+                        return pukestate.Three;
                 for (int i = 0; i < getspukenumber.Length - zerocount - 1; i++)//顺子逻辑的四行
                 {
                     minusintcount += (getspukenumber[i + 1] - getspukenumber[i]);
                 }//记录顺子差值合计值
-                if (minusintcount <= getspukenumber.Length && nubtypecount == getspukenumber.Length - zerocount)
+                if (minusintcount <= getspukenumber.Length-1 && nubtypecount == getspukenumber.Length - zerocount)
                     return pukestate.ThreeS;
                 return pukestate.None;
             case 4://炸弹、顺子、连对、
                 if (nubtypecount == 1 && zerocount != 4)
                     return pukestate.Boom;
-                if (nubtypecount == 2)
-                    return pukestate.TwoTwo;
                 for (int i = 0; i < getspukenumber.Length - zerocount - 1; i++)//顺子逻辑的四行
                     minusintcount += (getspukenumber[i + 1] - getspukenumber[i]);//记录顺子差值合计值
-                if (minusintcount <= getspukenumber.Length && nubtypecount == getspukenumber.Length - zerocount)
+                if (PKstate == pukestate.TwoTwo || PKstate == pukestate.None)
+                    if (nubtypecount == 2 && minusintcount == 1)
+                        return pukestate.TwoTwo;
+                if (minusintcount <= getspukenumber.Length-1 && nubtypecount == getspukenumber.Length - zerocount)
                     return pukestate.FourS;
-                else return pukestate.None;
+                return pukestate.None;
             case 5://炸弹、四带一、三带二、顺子
                 if (nubtypecount == 1)
                     return pukestate.FiveBoom;//如果有炸弹则直接返回炸弹类型
                 if (nubtypecount == 2)
                 {
-                    int i1 = getspukenumber[0], i2 = getspukenumber[1], i3 = getspukenumber[2], i4 = getspukenumber[3], i5 = getspukenumber[4];
-                    if (i1 == i2 && (i2 == i3 && (i3 == i4 || zerocount == 1) || zerocount == 2) || zerocount == 3)
-                        return pukestate.BoomOne;//如果有四带一则返回四带一类型
-                    else if ((i1 == i2 && i4 == i5 && (i2 == i3 || i3 == i4)) || (i1 == i2 && i3 == i4 && zerocount == 1) || (zerocount == 2 && (i1 == i2 || i2 == i3)))
+                    if (PKstate == pukestate.BoomOne || PKstate == pukestate.None)
+                    {
+                        int samcount = 1, samcount2 = 1;
+                        for (int i = 0; i < 4 - zerocount; i++)
+                        {
+                            if (getspukenumber[i] == getspukenumber[i + 1])
+                                samcount++;
+                            else
+                            {
+                                samcount2 = samcount;
+                                samcount = 0;
+                            }
+                        }
+                        if (samcount2 > samcount)
+                            samcount = samcount2;//获取最大相同数
+                        if (samcount == 4 - zerocount)
+                            return pukestate.BoomOne;//如果有四带一则返回四带一类型
+                    }
+                    if(PKstate!=pukestate.FiveS)
                         return pukestate.ThreeTwo;//如果有三带二则返回三带二类型
                 }
                 for (int i = 0; i < getspukenumber.Length - zerocount - 1; i++)//顺子逻辑的四行
                     minusintcount += (getspukenumber[i + 1] - getspukenumber[i]);//记录顺子差值合计值
-                if (minusintcount <= getspukenumber.Length && nubtypecount == getspukenumber.Length - zerocount)
+                if (minusintcount <= getspukenumber.Length-1 && nubtypecount == getspukenumber.Length - zerocount)
                     return pukestate.FiveS;
                 return pukestate.None;//如果没有则返回无效牌型
             case 6://炸弹、五带一、四带对、飞机、三连对、顺子、
-
                 if (nubtypecount == 1)
                     return pukestate.SixBoom;
                 if (nubtypecount == 2)//这边判定除了0以外只有两个数
@@ -172,7 +206,7 @@ public class GanDengYan : UdonSharpBehaviour
                     minusintcount += (getspukenumber[i + 1] - getspukenumber[i]);//记录顺子差值合计值
                 if (nubtypecount == 3 && minusintcount == 3)//三连对判定
                     return pukestate.SixBoom;
-                if (minusintcount <= getspukenumber.Length && nubtypecount == getspukenumber.Length - zerocount)
+                if (minusintcount <= getspukenumber.Length-1 && nubtypecount == getspukenumber.Length - zerocount)
                     return pukestate.SixBoom;
                 return pukestate.None;//如果没有炸弹则返回无效牌型
             default: return pukestate.None;
@@ -181,8 +215,9 @@ public class GanDengYan : UdonSharpBehaviour
     }
     public void ShowCardsFromPrivate()
     {   //进行复杂的三重判定，第一重为玩家是否首发，第二重鉴定牌型是否正确，打出后游戏是否结束
-        if (PlayersName[UsingPNid] != Networking.LocalPlayer.displayName || GameOver) return;
-        int forsavedlength = 0;
+        if (PlayersName[UsingPNid] != Networking.LocalPlayer.displayName || GameOver) return;//判定是否是自己操作与游戏结束
+        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        int forsavedlength = 0;//用于获取出牌长度
         for (int i = 0; i < 6; i++)
         {
             if (MySelectCardsID[i] != -1)
@@ -191,14 +226,12 @@ public class GanDengYan : UdonSharpBehaviour
         if (forsavedlength == 0) return;//如果没有选择卡牌则不进行任何操作
         int[] savedMineSelectCardID = new int[forsavedlength];
         forsavedlength = 0;
-        for (int i = 0; i < 6; i++)
-        {
-            if (MySelectCardsID[i] != -1)
+        foreach(int i in MySelectCardsID)
+            if (i != -1)
             {
-                savedMineSelectCardID[forsavedlength] = MySelectCardsID[i];//存储玩家选择的卡牌ID
+                savedMineSelectCardID[forsavedlength] = i;//存储玩家选择的卡牌ID
                 forsavedlength++;
             }
-        }
         for (int i = 0; i < savedMineSelectCardID.Length - 1; i++)//按照id重新排序，0在最后2在最前
         {
             for (int j = 0; j < savedMineSelectCardID.Length - 1 - i; j++)
@@ -211,11 +244,9 @@ public class GanDengYan : UdonSharpBehaviour
                 }
             }
         }
-        pukestate MinePukeState = GetPukeType(savedMineSelectCardID);//获取玩家选择的牌型
-
+        pukestate MinePukeState = GetPukeType(savedMineSelectCardID,pukestate.None);//获取玩家选择的牌型
         if (MinePukeState == pukestate.None)
-        {
-            MineCardsCount = 0;
+        {   //如果牌型不合法则初始化选牌
             for (int i = 0; i < 6; i++)
             {
                 MySelectCardsID[i] = -1;
@@ -223,402 +254,285 @@ public class GanDengYan : UdonSharpBehaviour
                 copytoMinecards[i].color = Color.white;
             }
             return;
-        }//如果牌型不合法则初始化选牌
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
-        if (ShowPukePN[0] == "" || ShowPukePN[0] == Networking.LocalPlayer.displayName)
-        {
-            ShowPukeType = MinePukeState;
-            YouCanShow(savedMineSelectCardID, forsavedlength);
         }
-        else//三重判定，正常判定对比卡牌，炸弹判定对比卡牌，超量炸弹判定对比卡牌
+        if (ShowPukePN[0] == "" || ShowPukePN[0] == Networking.LocalPlayer.displayName)
+        {   //首先判断自己是否首发，以及上一次出牌是否是自己
+            ShowPukeType = MinePukeState;
+        }
+        else//三重判定，优先判定炸弹，其次正常判定对比卡牌
         {
             switch (MinePukeState)
             {
                 case pukestate.Boom:
-                    if (ShowPukeType != pukestate.Boom)
+                    if (ShowPukeType != pukestate.Boom && ShowPukeType!=pukestate.FiveBoom)
                     {
-                        switch (ShowPukeType)
-                        {
-                            case pukestate.FiveBoom:
-                            case pukestate.SixBoom: return;//对方牌比较大，不让出
-                            default: YouCanShow(savedMineSelectCardID, forsavedlength); break;
-                        }
+                        YouCanShow(savedMineSelectCardID, forsavedlength); 
                         break;
                     }
-                    else
+                    else if(ShowPukeType==pukestate.Boom)
                     {
-                        if (pukenumber(savedMineSelectCardID[0]) > PlayersPukeNub[0])
+                        if (pukenumber(savedMineSelectCardID[0]) ==15|| pukenumber(savedMineSelectCardID[0])== PlayersPukeNub[0]+1||(pukenumber(savedMineSelectCardID[0])==3 && PlayersPukeNub[0]==15))
                         {
                             YouCanShow(savedMineSelectCardID, forsavedlength);
                             break;
                         }
-                        else return;
                     }
+                    return;//如果对方牌比较大则不让出(判定了对方是4炸或5炸的情况与2的情况
                 case pukestate.FiveBoom:
                     if (ShowPukeType != pukestate.FiveBoom)
                     {
-                        switch (ShowPukeType)
-                        {
-                            case pukestate.SixBoom: return;//对方牌比较大，不让出
-                            default: YouCanShow(savedMineSelectCardID, forsavedlength); break;
-                        }
+                        YouCanShow(savedMineSelectCardID, forsavedlength);
                         break;
                     }
-                    else
+                    else if (pukenumber(savedMineSelectCardID[0]) == 15 || pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1 || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
                     {
-                        if (pukenumber(savedMineSelectCardID[0]) > PlayersPukeNub[0])
-                        {
-                            YouCanShow(savedMineSelectCardID, forsavedlength);
-                            break;
-                        }
-                        else return;
+                        YouCanShow(savedMineSelectCardID, forsavedlength);
+                        break;
                     }
+                    return;
                 default: break;
             }//炸弹判定完成
+            MinePukeState = GetPukeType(savedMineSelectCardID, ShowPukeType);//重新获取玩家选择的牌型
             if (MinePukeState == ShowPukeType)
             {
-                CanIShow(savedMineSelectCardID, forsavedlength);
+                if(!CanIShow(savedMineSelectCardID, forsavedlength))return;
             }
             else return;//如果牌型不相同则不进行任何操作
         }
-        //最后判定游戏是否结束
+        YouCanShow(savedMineSelectCardID, forsavedlength);
+        //最后判定游戏是否结束，如果玩家手牌数为0，则游戏结束并计算分数
+        PlayersCardCount[UsingPNid] -= forsavedlength;//更新玩家手牌数量记录
         if (PlayersCardCount[UsingPNid] == 0)
         {
             GameOver = true;//如果玩家手牌数为0，则游戏结束
-            int winplayer = 0;// 游戏结束后的分数计算
-            for (; winplayer < 8; winplayer++)//寻找赢家
-            {
-                if (PlayersCardCount[winplayer] == 0)
-                {
-                    break;
-                }
-            }
             for (int i = 0; i < 8; i++)
             {
-                PlayersScore[i] -= PlayersCardCount[i];//根据剩余卡牌数扣分
-                PlayersScore[winplayer] += PlayersCardCount[i];//给赢家加分
-                if (PlayersCardCount[i] == 5)//被春天后额外扣分加分
+                if (PlayersCardCount[i] == 5)//被春天后的分数计算
                 {
-                    PlayersScore[i] -= 5;
-                    PlayersScore[winplayer] += 5;
+                    PlayersScore[i] -= 10;
+                    PlayersScore[UsingPNid] += 10;
+                }
+                else
+                {
+                    PlayersScore[i] -= PlayersCardCount[i];//根据剩余卡牌数扣分
+                    PlayersScore[UsingPNid] += PlayersCardCount[i];//给赢家加分
                 }
             }
         }
         else
-        {
             UsingPNid = (UsingPNid + 1) % PlayersCount;//切换到下一个玩家
-        }
+        IsNewGame = false;
+        IsAdd = false;
         RequestSerialization();
+        for (int i = 0; i < 6; i++)//清除玩家手牌中打出牌的显示
+        {
+            if (MySelectCardsID[i] != -1)
+            {
+                MyCardsID[i] = -2;
+                MySelectCardsID[i] = -1;//初始化自身状态
+            }
+        }
+        for (int i = 0; i < 5; i++)//清除玩家手牌中打出牌的显示
+        {
+            for (int j = 0; j < 5-i; j++)
+            {
+                if(MyCardsID[j] == -2)//如果有重复的卡牌则将其置为-2
+                {
+                    MyCardsID[j] = MyCardsID[j+1];
+                    MyCardsID[j + 1] = -2;//将重复的卡牌置为-2
+                }
+            }
+        }
         Setall();
     }
-    private void CanIShow(int[] savedMineSelectCardID, int forsavedlength)
+    private bool CanIShow(int[] savedMineSelectCardID, int forsavedlength)
     {
-        int PlayersNubCountFor0 = 0, PlayersNubCountFor1 = 0, MyNubCountFor0 = 0, MyNubCountFor1 = 0;
-        int savedPlayersNub0 = -1, savedPlayerNub1 = -1, savedMineNub0 = -1, savedMineNub1 = -1;
-        switch (ShowPukeType)
-        {
-            case pukestate.One: case pukestate.Two: case pukestate.Three: case pukestate.TwoTwo:
-                if (pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1
-                    || (pukenumber(savedMineSelectCardID[0]) == 15 && PlayersPukeNub[0] != 15)
-                    || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
-                {
-                    YouCanShow(savedMineSelectCardID, forsavedlength);//如果牌型相同且玩家选择的牌比展示牌大1，则可以展示
-                    break;
-                }
-                else return;//如果牌型相同但玩家选择的牌不比展示牌大1，则不进行任何操作
-            case pukestate.ThreeTwo:
-                PlayerAndMineNubSet(savedMineSelectCardID,
-                    PlayersNubCountFor0, PlayersNubCountFor1, MyNubCountFor0, MyNubCountFor1,
-                    savedPlayersNub0, savedPlayerNub1, savedMineNub0, savedMineNub1);
-                SetSavedNubThreeTwo(MyNubCountFor0, MyNubCountFor1, savedMineNub0, savedMineNub1);
-                SetSavedNubThreeTwo(PlayersNubCountFor0, PlayersNubCountFor1, savedPlayersNub0, savedPlayerNub1);
-                if (MyNubCountFor1 == 0 && PlayersNubCountFor1 == 0)
-                {
-                    if (savedPlayersNub0 == savedMineNub0 - 1 || savedPlayerNub1 == savedMineNub0 - 1
-                        || savedPlayersNub0 == savedMineNub1 - 1 || savedPlayerNub1 == savedMineNub1 - 1)
-                    {
-                        YouCanShow(savedMineSelectCardID, forsavedlength);
-                        break;
-                    }
-                    else return;//如果玩家选择的牌不比展示牌大1，则不进行任何操作
-                }
-                else if (MyNubCountFor1 != 0 && PlayersNubCountFor1 == 0)
-                {
-                    if (savedPlayersNub0 == savedMineNub0 - 1 || savedPlayerNub1 == savedMineNub0 - 1)
-                    {
-                        YouCanShow(savedMineSelectCardID, forsavedlength);
-                        break;
-                    }
-                    else return;
-                }
-                else if (MyNubCountFor1 == 0 && PlayersNubCountFor1 != 0)
-                {
-                    if (savedPlayersNub0 == savedMineNub0 - 1 || savedPlayersNub0 == savedMineNub1 - 1)
-                    {
-                        YouCanShow(savedMineSelectCardID, forsavedlength);
-                        break;
-                    }
-                    else return;
-                }
-                else if (savedPlayersNub0 == savedMineNub0 - 1)
-                {
-                    YouCanShow(savedMineSelectCardID, forsavedlength);
-                    break;
-                }
-                else return;
-            case pukestate.BoomOne:
-                PlayersNubCountFor0 = 0; PlayersNubCountFor1 = 0; MyNubCountFor0 = 0; MyNubCountFor1 = 0;
-                savedPlayersNub0 = -1; savedPlayerNub1 = -1; savedMineNub0 = -1; savedMineNub1 = -1;
-                PlayerAndMineNubSet(savedMineSelectCardID,
-                    PlayersNubCountFor0, PlayersNubCountFor1, MyNubCountFor0, MyNubCountFor1,
-                    savedPlayersNub0, savedPlayerNub1, savedMineNub0, savedMineNub1);
-                SetSavedNubBoomOne(MyNubCountFor0, MyNubCountFor1, savedMineNub0, savedMineNub1);
-                SetSavedNubBoomOne(PlayersNubCountFor0, PlayersNubCountFor1, savedPlayersNub0, savedPlayerNub1);
-                if (MyNubCountFor1 == 0 && PlayersNubCountFor1 == 0)
-                {
-                    if (savedPlayersNub0 == savedMineNub0 - 1 || savedPlayerNub1 == savedMineNub0 - 1
-                        || savedPlayersNub0 == savedMineNub1 - 1 || savedPlayerNub1 == savedMineNub1 - 1
-                        || savedPlayersNub0 == savedMineNub0 + 12 || savedPlayerNub1 == savedMineNub0 + 12
-                        || savedPlayersNub0 == savedMineNub1 + 12 || savedPlayerNub1 == savedMineNub1 + 12
-                        )
-                    {
-                        YouCanShow(savedMineSelectCardID, forsavedlength);
-                        break;
-                    }
-                    else return;//如果玩家选择的牌不比展示牌大1，则不进行任何操作
-                }
-                else if (MyNubCountFor1 != 0 && PlayersNubCountFor1 == 0)
-                {
-                    if (savedPlayersNub0 == savedMineNub0 - 1 || savedPlayerNub1 == savedMineNub0 - 1
-                        || savedPlayersNub0 == savedMineNub0 + 12 || savedPlayerNub1 == savedMineNub0 + 12)
-                    {
-                        YouCanShow(savedMineSelectCardID, forsavedlength);
-                        break;
-                    }
-                    else return;
-                }
-                else if (MyNubCountFor1 == 0 && PlayersNubCountFor1 != 0)
-                {
-                    if (savedPlayersNub0 == savedMineNub0 - 1 || savedPlayersNub0 == savedMineNub1 - 1
-                        || savedPlayersNub0 == savedMineNub0 + 12 || savedPlayersNub0 == savedMineNub1 + 12)
-                    {
-                        YouCanShow(savedMineSelectCardID, forsavedlength);
-                        break;
-                    }
-                    else return;
-                }
-                else if (savedPlayersNub0 == savedMineNub0 - 1 || savedPlayersNub0 == savedMineNub0 + 12)
-                {
-                    YouCanShow(savedMineSelectCardID, forsavedlength);
-                    break;
-                }
-                else return;
-            case pukestate.ThreeS: case pukestate.FourS: case pukestate.FiveS:
-                int MineMinNub = 99, MineMaxNub = 0, MineZeroCount = 0,
-                    PlayersMinNub = 99, PlayersMaxNub = 0, PlayersZeroCount = 0;
-                PlayerAndMineNubSetSSS(MineMinNub, MineMaxNub, MineZeroCount, PlayersMinNub, PlayersMaxNub, PlayersZeroCount, forsavedlength, savedMineSelectCardID);
-                int setMineArea = forsavedlength - 1 - (MineMaxNub - MineMinNub),
-                    setPlayersArea = forsavedlength - 1 - (PlayersMaxNub - PlayersMinNub);
-                MineMaxNub = MineMinNub + setMineArea;//设置最大范围
-                PlayersMaxNub = PlayersMinNub + setPlayersArea;//设置最大范围
-                MineMinNub -= setMineArea;//设置最小范围
-                PlayersMinNub -= setPlayersArea;//设置最小范围
-                if ((MineMinNub > PlayersMinNub && MineMinNub <= PlayersMaxNub + 1) || (MineMaxNub > PlayersMinNub && MineMaxNub <= PlayersMaxNub + 1))
-                {
-                    YouCanShow(savedMineSelectCardID, forsavedlength);
-                    break;
-                }
-                else return;
-            default: return;
-        }
-    }
-    private void PlayerAndMineNubSetSSS(int MineMinNub, int MineMaxNub, int MineZeroCount, int PlayersMinNub, int PlayersMaxNub, int PlayersZeroCount, int forsavedlength, int[] savedMineSelectCardID)
-    {
+        int MyZeroCount = 0, PlayerZeroCount = 0;//记录0的数量
+        int[] getMyPukeNum = new int[forsavedlength];//获取卡牌ID对应的数字的数组
+        int[] getPlayerPukeNum = PlayersPukeNub;
         for (int i = 0; i < forsavedlength; i++)
         {
-            if (PlayersPukeNub[i] == 0) PlayersZeroCount++;
-            else
+            getMyPukeNum[i] = pukenumber(savedMineSelectCardID[i]);
+            if (getMyPukeNum[i] == 0) MyZeroCount++;//记录0的数量
+            if (getPlayerPukeNum[i]==0) PlayerZeroCount++;
+        }//给获取卡牌数字赋值，并记录两组卡的0的数量和数的数量
+        //如果首位是2，我们重新排序一下，保证顺子判定的正确性
+        ReSetForPukeNum(ref getMyPukeNum, MyZeroCount,forsavedlength);
+        ReSetForPukeNum(ref getPlayerPukeNum, PlayerZeroCount, forsavedlength);
+        int minusIntCount = 0;//记录顺子差值合计值
+        switch (ShowPukeType)
+        {
+            case pukestate.One:
+            case pukestate.Two:
+            case pukestate.Three:
+            case pukestate.TwoTwo:
+                minusIntCount = getMyPukeNum[0] - getPlayerPukeNum[0];
+                if (minusIntCount == 1 || minusIntCount == -12 || (getMyPukeNum[0] == 15 && ShowPukeType != pukestate.TwoTwo&& PlayersPukeNub[0] !=15))//如果玩家打出的牌比上家大1
+                {
+                    return true;
+                }
+                break;
+            case pukestate.ThreeS:
+            case pukestate.FourS:
+            case pukestate.FiveS:
+                minusIntCount = forsavedlength - 1 - (getMyPukeNum[forsavedlength - 1 - MyZeroCount] - getMyPukeNum[0]);//记录顺子差值合计值
+                int mymin = getMyPukeNum[0] - minusIntCount;//获取玩家打出的牌的最小值
+                minusIntCount = forsavedlength - 1 - (getPlayerPukeNum[forsavedlength - 1 - PlayerZeroCount] - getPlayerPukeNum[0]);//记录顺子差值合计值
+                int playersmin = getPlayerPukeNum[0] - minusIntCount;//获取场上puke判定的最小值
+                if (mymin >= playersmin + 1 && getMyPukeNum[0] <= getPlayerPukeNum[0] + 1) return true;//如果玩家打出的牌比上家大1
+                break;
+            case pukestate.BoomOne:
+            case pukestate.ThreeTwo://需要记录哪个数的数量更多，然后根据数量更多的数来进行比较
+
+                int[] mynub,playernub;
+                int MyIntType, PlayerIntType;//记录玩家和对手的最大类型
+                if (MyZeroCount > 1) mynub = new[] { getMyPukeNum[0], getMyPukeNum[4 - MyZeroCount] };
+                else
+                {
+                    MyIntType = GetMaxType(getMyPukeNum,MyZeroCount);
+                    if (MyIntType == -1) mynub = new[] { getMyPukeNum[0], getMyPukeNum[4 - MyZeroCount] };
+                    else mynub = new[] { getMyPukeNum[MyIntType] };
+                }
+                if (PlayerZeroCount > 1) playernub = new[] { getPlayerPukeNum[0], getPlayerPukeNum[4 - PlayerZeroCount] };
+                else
+                {
+                    PlayerIntType = GetMaxType(getPlayerPukeNum,PlayerZeroCount);
+                    if (PlayerIntType == -1) playernub = new[] { getPlayerPukeNum[0], getPlayerPukeNum[4 - PlayerZeroCount] };
+                    else playernub = new[] { getPlayerPukeNum[PlayerIntType] };
+                }
+
+                if (mynub.Length == 2)
+                {
+                    if (playernub.Length == 2)
+                        if (mynub[0] == playernub[0] + 1 || mynub[0] == playernub[1] + 1
+                             || mynub[1] == playernub[0] + 1 || mynub[1] == playernub[1] + 1
+                             ) return true;
+                        else return false;
+                    else
+                    {
+                        if (mynub[0] == playernub[0] + 1 || mynub[1] == playernub[0] + 1
+                            ) return true;
+                    }
+                }
+                else
+                {
+                    if (playernub.Length == 2)
+                    {
+                        if (mynub[0] == playernub[0] + 1 || mynub[0] == playernub[0] + 1
+                            ) return true;
+                    }
+                    else
+                    {
+                        if (mynub[0] == playernub[0] + 1)return true;
+                    }
+                }
+                break;
+                    default: return false;
+        }
+        return false;
+    }
+    private int GetMaxType(int[] getPukeNum,int zerocount)
+    {
+        int samcount = 1, samcount2 = 1;//记录相同数
+        for (int i = 0; i < 3; i++)
+        {
+            if (getPukeNum[i + 1] != 0)
+                if (getPukeNum[i] == getPukeNum[i + 1])
+                    samcount++;
+                else
+                {
+                    samcount2 = samcount;
+                    samcount = 0;
+                }
+            if (i == 3)
             {
-                if (PlayersPukeNub[i] > PlayersMaxNub) PlayersMaxNub = PlayersPukeNub[i];
-                if (PlayersPukeNub[i] < PlayersMinNub) PlayersMinNub = PlayersPukeNub[i];
-            }
-            if (pukenumber(savedMineSelectCardID[i]) == 0) MineZeroCount++;
-            else
-            {
-                if (pukenumber(savedMineSelectCardID[i]) > MineMaxNub) MineMaxNub = pukenumber(savedMineSelectCardID[i]);
-                if (pukenumber(savedMineSelectCardID[i]) < MineMinNub) MineMinNub = pukenumber(savedMineSelectCardID[i]);
+                if (samcount > samcount2) samcount = 4-zerocount;
+                else if (samcount2 > samcount) samcount = 0;
+                else samcount = -1;
             }
         }
-        if (MineMaxNub - MineMinNub > forsavedlength - 1)//玩家的牌不连续，所以走循环判定，加倍长度
+        return samcount;
+    }
+    /// <summary>
+    /// 对获取的卡牌数字进行排序，重置顺子判定的范围
+    /// </summary>
+    private void ReSetForPukeNum(ref int[] getPukeNum, int ZeroCount, int forsavedlength) {
+        if (getPukeNum[0] == 15 && forsavedlength > 1)
         {
-            for (int i = 0; i < forsavedlength; i++)
+            for (int i = 0; i < forsavedlength - 1 - 5; i++)
             {
-                int tempnub = pukenumber(savedMineSelectCardID[i]);
-                if (tempnub != 0)
+                if (getPukeNum[i] < 9) getPukeNum[i] += 13;//加倍判定长度，将比较范围重置到10-24
+            }
+            for (int i = 0; i < forsavedlength - 1 - ZeroCount; i++)
+            {
+                for (int j = 0; j < forsavedlength - 1 - ZeroCount - i; j++)
                 {
-                    if (tempnub < 9 || tempnub + 13 > MineMaxNub) MineMaxNub = tempnub + 13;
-                    else if (tempnub >= 9 || tempnub < MineMinNub) MineMinNub = tempnub;
+                    if (getPukeNum[j] > getPukeNum[j + 1])
+                    {
+                        int temp = getPukeNum[j];
+                        getPukeNum[j] = getPukeNum[j + 1];
+                        getPukeNum[j + 1] = temp;//对获取的卡牌数字进行排序
+                    }
                 }
             }
         }
-        if (PlayersMaxNub - PlayersMinNub > forsavedlength - 1)//玩家的牌不连续，所以走循环判定，加倍长度
-        {
-            for (int i = 0; i < forsavedlength; i++)
-            {
-                int tempnub = PlayersPukeNub[i];
-                if (tempnub != 0)
-                {
-                    if (tempnub < 9 || tempnub + 13 > PlayersMaxNub) PlayersMaxNub = tempnub + 13;
-                    else if (tempnub >= 9 || tempnub < PlayersMinNub) PlayersMinNub = tempnub;
-                }
-            }
-        }
     }
-    private void SetSavedNubThreeTwo(int NubCountFor0, int NubCountFor1, int savedNub0, int savedNub1)
-    {
-        int saved = NubCountFor0 * 10 + NubCountFor1;
-        if (saved == 02||saved==11)
-        {
-            int temp = savedNub0;
-            savedNub0 = savedNub1;
-            savedNub1 = temp;
-        }
-        else if (saved == 12 || saved == 22 || saved == 21)
-        {
-            savedNub0 = 0;
-        }
-    }
-    private void SetSavedNubBoomOne(int NubCountFor0, int NubCountFor1, int savedNub0, int savedNub1)
-    {
-        int saved = NubCountFor0 * 10 + NubCountFor1;
-        if (saved == 31)
-        {
-            savedNub0 = 0;
-        }
-        else if (saved == 01 || saved == 11 || saved == 21)
-        {
-            int temp = savedNub0;
-            savedNub0 = savedNub1;
-            savedNub1 = temp;
-        }
-    }
-    private void PlayerAndMineNubSet(int[] savedMineSelectCardID,
-        int PlayersNubCountFor0, int PlayersNubCountFor1,
-        int MyNubCountFor0, int MyNubCountFor1,
-        int savedPlayersNub1, int savedPlayerNub2,
-        int savedMineNub1, int savedMineNub2)
-    {
-        for (int i = 0; i < 5; i++)
-        {
-            if (PlayersPukeNub[i] == 0) PlayersNubCountFor0++;
-            else if (PlayersPukeNub[i] == savedPlayersNub1 || savedPlayersNub1 == -1)
-            {
-                PlayersNubCountFor1++; savedPlayersNub1 = PlayersPukeNub[i];
-            }
-            else { savedPlayerNub2 = PlayersPukeNub[i]; }
-            if (pukenumber(savedMineSelectCardID[i]) == 0) MyNubCountFor0++;
-            else if (pukenumber(savedMineSelectCardID[i]) == savedMineNub1 || savedMineNub1 == -1)
-            {
-                MyNubCountFor1++; savedMineNub1 = pukenumber(savedMineSelectCardID[i]);
-            }
-            else { savedMineNub2 = pukenumber(savedMineSelectCardID[i]); }
-        }
-    }
+    /// <summary>
+    /// 修改PlayersPukeNub和ShowPukeID与ShowPukePN的值
+    /// </summary>
+    /// <param name="savedMineSelectCardID">操作的存储数组</param>
+    /// <param name="forsavedlength">卡牌长度</param>
     private void YouCanShow(int[] savedMineSelectCardID,int forsavedlength)
     {
         int savedcount = 0;
         PlayersPukeNub = new int[savedMineSelectCardID.Length];
-        foreach (int i in savedMineSelectCardID)
+        foreach (int i in savedMineSelectCardID)//存储出牌的数字
         {
             PlayersPukeNub[savedcount]= pukenumber(i);
             savedcount++;
         }
-        for (int i = 5; i >= 0; i--)
+        for (int i = 5; i >= 0; i--)//排序ShowPuke
         {
-            if (i < forsavedlength)
+            if (forsavedlength>i )
             {
                 ShowPukeID[i] = savedMineSelectCardID[i];
                 ShowPukePN[i] = Networking.LocalPlayer.displayName;
             }
             else
             {
-                ShowPukeID[i] = ShowPukeID[i - 1];
-                ShowPukePN[i] = ShowPukePN[i - 1];
+                ShowPukeID[i] = ShowPukeID[i - forsavedlength];
+                ShowPukePN[i] = ShowPukePN[i - forsavedlength];
             }
-        }
-        ShowPukeType = GetPukeType(savedMineSelectCardID);//获取展示牌类型
-        for (int i = 0; i < 6; i++)//清除玩家手牌中打出牌的显示
-        {
-            if (MySelectCardsID[i] != -1)
-            {
-                minecards[i].sprite = nullimage.sprite;
-                MyCardsID[i] = -2;
-                MySelectCardsID[i] = -1;
-            }
-            minecards[i].color = Color.white;//取消选择时恢复颜色
-            copytoMinecards[i].color = Color.white;
-        }
-
-        PlayersCardCount[UsingPNid] -= forsavedlength;//更新玩家手牌数量记录
-        for (int i = 0; i < 6; i++)//重理手牌
-        {
-            if (MyCardsID[i] == -2)
-            {
-                for (int j = 0; j < 6 - i; j++)
-                    if (MyCardsID[i + j] != -2)
-                    {
-                        minecards[i].sprite = minecards[i + j].sprite;
-                        MyCardsID[i] = MyCardsID[i + j];
-                        MyCardsID[i + j] = -2;
-                        break;
-                    }
-            }
-            if (i >= PlayersCardCount[UsingPNid]) minecards[i].sprite = nullimage.sprite;
         }
     }
     public void PassMyTurn()
-    {   
+    {
+        //当我是上一个打出者、我不是当前操作玩家、游戏结束时不进行任何操作
         if (ShowPukePN[0] == Networking.LocalPlayer.displayName
-            ||usingPN.text != Networking.LocalPlayer.displayName || GameOver) return;
-        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject)) return;
+            ||PlayersName[UsingPNid] != Networking.LocalPlayer.displayName || GameOver) return;
+        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
         UsingPNid = (UsingPNid + 1) % PlayersCount;//切换到下一个玩家
-        if (PlayersName[UsingPNid] == playersNameforCard[0].text)//当下一位玩家是上一个打牌者时，给他加一张
+        if (PlayersName[UsingPNid] == ShowPukePN[0])//当下一位玩家是上一个打牌者时，给他加一张
         {
             IsAdd = true;
             Cardscount--;
+            PlayersCardCount[UsingPNid]++;
             if (Cardscount == -2)
             {
                 SetCardRandom();
                 Cardscount = 106;
-                PlayersCardCount[UsingPNid]++;
             }
         }
         else
-        {
             IsAdd = false;
-        }
         RequestSerialization();
         Setall();
     }
     public void JoinGame()
     {
-        if (!GameOver) return;
-        bool isjoin = false;
-        for (int i = 0; i < 8; i++)
-        {
-            if (PlayersName[i] == "")
-            {
-                PlayersName[i] = Networking.LocalPlayer.displayName;
-                isjoin = true;
-                if (i == 0) UsingPNid = 0;
-                break;
-            }
-        }
-        if (!Networking.IsOwner(GetOwn(), gameObject)||!isjoin) return;
-        JSbutton[0].SetActive(false);//隐藏加入游戏按钮
-        JSbutton[2].SetActive(false);
-        JSbutton[1].SetActive(true);//显示开始游戏按钮
-        JSbutton[3].SetActive(true);
+        if (!GameOver||PlayersCount==8) return;
+        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        PlayersName[PlayersCount] = Networking.LocalPlayer.displayName;
         PlayersCount++;
         RequestSerialization();
         Setall();
@@ -636,75 +550,57 @@ public class GanDengYan : UdonSharpBehaviour
     public void SetNewGame()
     {
         if (!Networking.IsOwner(GetOwn(), gameObject)) return;
-        SetCardRandom();
-        GameOver = false;
-        string[] CPPlayersName = new string[8];
-        for (int i = 0; i < 8; i++)//重设玩家信息
-        {
-            CPPlayersName[i] = "";
-        }
+        SetCardRandom();//针对AllCardsID随机洗牌
+        string[] CPPlayersName = new string[8] {"", "", "", "", "", "", "", "",};//用于重新排序玩家
         int setresetint = UsingPNid;
-        int playercount = 0;
-        for (int i = 0; i < 8; i++)//重设玩家序列
+        for (int i = 0; i < PlayersCount; i++)//重设玩家序列
         {
             CPPlayersName[i] = PlayersName[setresetint];
-            if (setresetint + 1 < 8 && PlayersName[setresetint + 1] != "")
-            {
-                setresetint++;
-            }
-            else if (setresetint + 1 >= 8)
+            setresetint = (setresetint+1)%8;//防止溢出
+            if (PlayersName[setresetint] == "")
             {
                 setresetint = 0;
             }
-            else if (PlayersName[setresetint + 1] == "")
-            {
-                i += (8 - setresetint);
-                setresetint = 0;
-            }
-            playercount++;
         }
         PlayersName = CPPlayersName;
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < PlayersCount; i++)
         {
             if (PlayersName[i] == "") break;
             PlayersCardCount[i] = 5;
         }
+        PlayersCardCount[0] = 6;//设置玩家手牌数量显示
+        Cardscount = 107 - 6 - 5 * PlayersCount;//设置卡牌书
+        PlayersPukeNub = new int[0];
         ShowPukeID = new[] { -1, -1, -1, -1, -1, -1 };
-        ShowPukePN = new[] { "", "", "", "", "", "" };
         ShowPukeType = 0;
-        PlayersCardCount[0] = 6;
-        IsNewGame = true;
-        Cardscount = 107 - 6 - 5 * playercount;
+        ShowPukePN = new[] { "", "", "", "", "", "" };//初始化展示牌的四变量
         UsingPNid = 0;
+        GameOver = false;
+        IsNewGame = true;
         IsAdd = false;
+        Reset = false;
         RequestSerialization();
         Setall();
     }//重置游戏数据
     public void ResetAll()
     {
         if (!Networking.IsOwner(GetOwn(), gameObject)) return;
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < 8; i++)//初始化玩家列表变量
         {
             PlayersName[i]="";
             PlayersScore[i] = 100;
             PlayersCardCount[i] = 0;
         }
-        PlayersPukeNub = new int[0];
-        GameOver = true;
-        usingPN.text = "";
+        UsingPNid = 0;//重置使用玩家ID
+        PlayersCount = 0;
+        PlayersPukeNub = new int[0];//初始化玩家打出的牌
         for (int i = 0; i < 6; i++)
         {
-            minecards[i].sprite = nullimage.sprite;
-            minecards[i].color = Color.white;
-            showcards[i].sprite = nullimage.sprite;
-            playersNameforCard[i].text = "";
+            ShowPukeID[i] = -1;//初始化展示牌ID
         }
-        MineCardsCount = 0;
-        MyCardsID = new int[6] { -1, -1, -1, -1, -1, -1 };
-        MySelectCardsID = new int[6] { -1,-1,-1,-1,-1,-1 };//初始化玩家选择的卡牌ID
-        IsNewGame=false;
-        ResetButton = true;
-        PlayersCount = 0;
+        GameOver = true;//锁定出牌按钮
+        IsNewGame =false;//不让新游戏开始
+        Reset = true;//清空玩家手牌
         RequestSerialization();
         Setall();
     }
@@ -714,10 +610,53 @@ public class GanDengYan : UdonSharpBehaviour
     }
     private void Setall()
     {
-        
-        if (IsNewGame)//新游戏开始时重置玩家手牌
+        SetJSButton();
+        if (IsAdd&& PlayersName[UsingPNid] == Networking.LocalPlayer.displayName)//当加牌时
         {
-            for (int i=0;i<8;i++) 
+                MyCardsID[PlayersCardCount[UsingPNid]-1] = AllCardsID[Cardscount + 1];
+        }
+        usingPN.text = PlayersName[UsingPNid];//更新当前使用的玩家名称
+        SetMe();
+        SetInGamePlayer();//更新玩家列表信息
+        Setshowcards();//更新显示卡牌信息
+        CopyToWorld();
+    }
+    /// <summary>计算并设置按钮状态</summary>
+    private void SetJSButton()
+    {
+        bool ishide = true;
+        foreach (string s in PlayersName)
+            if (s == Networking.LocalPlayer.displayName)
+            {
+                JSbutton[0].SetActive(false);
+                JSbutton[1].SetActive(true);
+                JSbutton[2].SetActive(false);
+                JSbutton[3].SetActive(true);
+                ishide = false;
+                break;
+
+            }
+        if (ishide)
+        {
+            JSbutton[0].SetActive(true);
+            JSbutton[1].SetActive(false);
+            JSbutton[2].SetActive(true);
+            JSbutton[3].SetActive(false);
+        }
+    }
+    private void SetMe()
+    {
+        if (Reset)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                MyCardsID[i] = -1;//初始化玩家手牌ID
+                MySelectCardsID[i] = -1;//初始化玩家选择的卡牌ID
+            }
+        }
+        else if (IsNewGame)//新游戏开始时重置玩家手牌
+        {
+            for (int i = 0; i < 8; i++)
             {
                 if (Networking.LocalPlayer.displayName == PlayersName[i])
                 {
@@ -725,45 +664,28 @@ public class GanDengYan : UdonSharpBehaviour
                     {
                         for (int j = 0; j < 6; j++)
                         {
-                            minecards[j].sprite = allpuke[AllCardsID[107 - j]].sprite;
                             MyCardsID[j] = AllCardsID[107 - j];//存储玩家手牌ID
-                            minecards[i].color = Color.white;
+                            MySelectCardsID[j] = -1;
                         }
                     }
                     else
                     {
                         for (int j = 0; j < 5; j++)
                         {
-                            minecards[j].sprite = allpuke[AllCardsID[107 - 5 * i - j]].sprite;
-                            MyCardsID[j] = AllCardsID[107 - 5 * i - j];//存储玩家手牌ID
-                            minecards[i].color = Color.white;
+                            MyCardsID[j] = AllCardsID[101 - 5 * (i - 1) - j];//存储玩家手牌ID
+                            MySelectCardsID[j] = -1;
                         }
                     }
                 }
             }
-            IsNewGame = false;
         }
-        if (ResetButton)
+        for (int i = 0; i < 6; i++)
         {
-            JSbutton[0].SetActive(true);//显示加入游戏按钮
-            JSbutton[1].SetActive(false);//隐藏开始游戏按钮
-            JSbutton[2].SetActive(true);
-            JSbutton[3].SetActive(false);
-            ResetButton = false;
+            if (MyCardsID[i] == -1 || MyCardsID[i]==-2)minecards[i].sprite = nullimage.sprite;//如果玩家手牌ID为-1、-2，则显示空白图片
+            else minecards[i].sprite = allpuke[MyCardsID[i]].sprite;
+            if(MySelectCardsID[i] != -1) minecards[i].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f);//初始化玩家选择的卡牌ID
+            else minecards[i].color = Color.white;
         }
-        if (IsAdd)//当加牌时
-        {
-            if (PlayersName[UsingPNid] == Networking.LocalPlayer.displayName)
-            {
-                PlayersCardCount[UsingPNid] =PlayersCardCount[UsingPNid];//更新玩家手牌数量记录
-                MyCardsID[PlayersCardCount[UsingPNid]] = AllCardsID[Cardscount + 1];
-                minecards[PlayersCardCount[UsingPNid]].sprite = allpuke[MyCardsID[PlayersCardCount[UsingPNid]]].sprite;//更新玩家手牌显示
-            }
-        }
-        usingPN.text = PlayersName[UsingPNid];//更新当前使用的玩家名称
-        SetInGamePlayer();//更新玩家列表信息
-        Setshowcards();//更新显示卡牌信息
-        CopyToWorld();
     }
     private void SetInGamePlayer()
     {
@@ -792,15 +714,16 @@ public class GanDengYan : UdonSharpBehaviour
     private void CopyToWorld()
     {
         int i;
-        for (i = 0; i < playersInGame.Length; i++)
+        for (i = 0; i < 8; i++)
         {
             copytoPlayersInGame[i].text = playersInGame[i].text;
             copytoPlayersScore[i].text = playersScore[i].text;
             copytoPlayersCardCount[i].text=playersCardCount[i].text;
         }
-        for (i = 0; i < minecards.Length; i++)
+        for (i = 0; i < 6; i++)
         {
             copytoMinecards[i].sprite = minecards[i].sprite;
+            copytoMinecards[i].color = minecards[i].color;
             copytoShowcards[i].sprite = showcards[i].sprite;
             copytoPlayersNameforCard[i].text = playersNameforCard[i].text;
         }
@@ -817,28 +740,17 @@ public class GanDengYan : UdonSharpBehaviour
     private void SetminecardForSelect(int ForSelectMineCardID)
     {
         if (GameOver|| MyCardsID[ForSelectMineCardID] == -2) return;
-        for(int i = 0; i < 6; i++)
-        {
-            if (Networking.LocalPlayer.displayName == PlayersName[i])
-                if (ForSelectMineCardID >= PlayersCardCount[i])
-                    return;//如果玩家选择的卡牌ID大于玩家手牌数量，则不进行任何操作
-                else break;//否则跳出循环，进行下一步操作
-            if(i==5)
-                return;
-        }
         if (MyCardsID[ForSelectMineCardID] == MySelectCardsID[ForSelectMineCardID])
         {
             MySelectCardsID[ForSelectMineCardID] = -1;
             minecards[ForSelectMineCardID].color = Color.white;//取消选择时恢复颜色
             copytoMinecards[ForSelectMineCardID].color = Color.white;
-            MineCardsCount--;
         }//如果选择的卡牌ID和手牌ID相同，则取消选择
         else
         {
             MySelectCardsID[ForSelectMineCardID] = MyCardsID[ForSelectMineCardID];
             minecards[ForSelectMineCardID].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f);//选择时变为黄色
-            copytoMinecards[ForSelectMineCardID].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f);
-            MineCardsCount++;
+            copytoMinecards[ForSelectMineCardID].color = minecards[ForSelectMineCardID].color;
         }
     }
     public void Selectminecard0() { SetminecardForSelect(0); }

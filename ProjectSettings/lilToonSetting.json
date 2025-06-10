@@ -105,6 +105,7 @@
     "LIL_OPTIMIZE_USE_FORWARDADD_SHADOW": false,
     "LIL_OPTIMIZE_USE_VERTEXLIGHT": true,
     "LIL_OPTIMIZE_USE_LIGHTMAP": false,
+    "LIL_OPTIMIZE_USE_VRCLIGHTVOLUMES": true,
     "LIL_OPTIMIZE_DEFFERED": false,
     "isLocked": false,
     "isDebugOptimize": false,
@@ -136,5 +137,5 @@
     "presetCloth": {
         "instanceID": 0
     },
-    "previousVersion": 44
+    "previousVersion": 45
 }

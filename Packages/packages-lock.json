@@ -1,5 +1,17 @@
 {
   "dependencies": {
+    "cn.org.vrcd.vpm.vrchat-sdk-patcher": {
+      "version": "file:cn.org.vrcd.vpm.vrchat-sdk-patcher",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "cn.org.vrcd.vpm.vrchat-sdk-patcher.worlds": {
+      "version": "file:cn.org.vrcd.vpm.vrchat-sdk-patcher.worlds",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.poiyomi.toon": {
       "version": "file:com.poiyomi.toon",
       "depth": 0,

@@ -13,7 +13,11 @@ public class gameswitch : UdonSharpBehaviour
     [UdonSynced] bool forSw = false;//是否开启
     private void Start()
     {
-        foreach (GameObject go in gameObjects) go.SetActive(false);//初始化为关闭状态
+        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject)) return;
+        setGOint = 0;//被控制的物体组索引
+        forSw = false;//是否开启
+        RequestSerialization();//请求同步
+        SetGOSW();
     }
     //开关函数的主要调用
     private void SetObjectActive(int set, bool setB)

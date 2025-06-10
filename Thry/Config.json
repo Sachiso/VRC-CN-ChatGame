@@ -1,4 +1,7 @@
 {
+    "lastVersion": {
+        "_stringValue": "2.65.1"
+    },
     "loggingLevel": 1,
     "default_texture_type": 0,
     "showRenderQueue": true,
@@ -7,6 +10,7 @@
     "allowCustomLockingRenaming": false,
     "autoMarkPropertiesAnimated": true,
     "showStarNextToNonDefaultProperties": true,
+    "showNotes": true,
     "texturePackerCompressionWithAlphaOverwrite": -1,
     "texturePackerCompressionNoAlphaOverwrite": -1,
     "gradientEditorCompressionOverwrite": -1,
@@ -23,6 +27,5 @@
     "disableUnlockedShaderStrippingOnBuild": false,
     "forceAsyncCompilationPreview": true,
     "fixKeywordsWhenLocking": true,
-    "saveAfterLockUnlock": true,
-    "verion": "2.62.11"
+    "saveAfterLockUnlock": true
 }
