@@ -32,7 +32,7 @@ public class NGwordget : UdonSharpBehaviour
     [UdonSynced] private string ownplayer;//所有者的name存储
     [UdonSynced] private int forlength;//判断ownplayer在哪一行
     [UdonSynced] private string[] playernamelist = new string[0];//玩家name列表
-    [UdonSynced] private string[] NGText=new string[500]; // 存储所有NG词的数组
+    [UdonSynced] private string[] NGText=new string[0]; // 存储所有NG词的数组
     [UdonSynced] private objectstate[] objectstates = new objectstate[0];//用于识别个体的状态，
     [UdonSynced] private int[] objectNGText = new int[0];//用于获取与玩家绑定的NG词序列，获取物体是赋予值
     //作为新对象加入游戏时重载所有对象物体，同步时不重载，只额外加入自己的。
@@ -40,7 +40,9 @@ public class NGwordget : UdonSharpBehaviour
     {
         if (NGTextLength == 0)
         {
-            usualuseclass.LoadTextToString(getText, ref NGText,ref NGTextLength);//加载Text到存储string
+
+            usualuseclass.LoadTextToString(getText, ref NGText);//加载Text到存储string
+
             usualuseclass.SetRandomString(ref NGText,NGTextLength);//随机化NGText
             forNGText = NGTextLength;//初始化NG词序列最大值
         }

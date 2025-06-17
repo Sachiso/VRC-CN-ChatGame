@@ -22,10 +22,8 @@ public class ZDHDMX : UdonSharpBehaviour
     public TextMeshProUGUI usingPN;
 
     /// <summary>全部文本内容的索引</summary>
-    [UdonSynced] private int[] GetZXHCardsID=new int[100];//真心话序列化文本索引
-    [UdonSynced] private int[] GetDMXCardsID=new int[100];///大冒险序列化文本索引
-    [UdonSynced] private int ZXHLength = 0;
-    [UdonSynced] private int DMXLength = 0;
+    [UdonSynced] private int[] GetZXHCardsID=new int[0];//真心话序列化文本索引
+    [UdonSynced] private int[] GetDMXCardsID=new int[0];///大冒险序列化文本索引
     [UdonSynced] private int[] ZDCardcount=new int[2];//索引的序列
     [UdonSynced] private int[] ShowZDCardsID=new int[5];//真心话展示索引
     [UdonSynced] private bool[] IsZXH=new bool[5]; //真心话还是大冒险？
@@ -45,17 +43,21 @@ public class ZDHDMX : UdonSharpBehaviour
     {
         if (!usualuseclass.IsSetOwn(gameObject)) return;
         string[] temps=new string[0];
-        usualuseclass.LoadTextToString(showZXHText,ref temps, ref ZXHLength);
+        usualuseclass.LoadTextToString(showZXHText,ref temps);
+        ZDCardcount[0] = temps.Length - 1;
+        GetZXHCardsID= new int[temps.Length];
         usualuseclass.SetIntOrder(ref GetZXHCardsID);
-        usualuseclass.LoadTextToString(showDMXText, ref temps, ref DMXLength);
+        usualuseclass.LoadTextToString(showDMXText, ref temps);
+        ZDCardcount[1] = temps.Length - 1;
+        GetDMXCardsID= new int[temps.Length];
         usualuseclass.SetIntOrder(ref GetDMXCardsID);
 
-        ZDCardcount[0] = ZXHLength - 1;ZDCardcount[1] = DMXLength - 1;
         usualuseclass.ResetIntToInt(ref ShowZDCardsID, -1);
         usualuseclass.ResetBoolToBool(ref IsZXH,false);
         usualuseclass.ResetIntToInt(ref MinecardsID, -1);
         usualuseclass.ResetStringToStringArray(ref PlayersName, "");
         ShowMyCardsID = -1;
+        UsingPN = "";
         RequestSerialization();
         Setall();
     }
@@ -76,7 +78,7 @@ public class ZDHDMX : UdonSharpBehaviour
                 minecards[0].sprite = GanDengYan.nullimage.sprite;
             else
             {
-                int i = UnityEngine.Random.Range(0, 107);
+                int i = UnityEngine.Random.Range(0, 108);
                 MinecardsID[0] = i;
                 minecards[0].sprite = GanDengYan.allpuke[i].sprite;
             }
@@ -91,7 +93,7 @@ public class ZDHDMX : UdonSharpBehaviour
                 minecards[1].sprite = GanDengYan.nullimage.sprite;
             else
             {
-                int i = UnityEngine.Random.Range(0, 107);
+                int i = UnityEngine.Random.Range(0, 108);
                 MinecardsID[1] = i;
                 minecards[1].sprite = GanDengYan.allpuke[i].sprite;
             }
@@ -105,16 +107,33 @@ public class ZDHDMX : UdonSharpBehaviour
     }
     private void SetShow()
     {
-        int tempint = 0;
-        string[] tempZXH = new string[0];
-        usualuseclass.LoadTextToString(showZXHText, ref tempZXH,ref tempint);
-        string[] tempDMX = new string[0];
-        usualuseclass.LoadTextToString(showDMXText, ref tempDMX, ref tempint);
-
-
         if(ShowMyCardsID==-1) {showMyCards.sprite=GanDengYan.nullimage.sprite;}
         else showMyCards.sprite = GanDengYan.allpuke[ShowMyCardsID].sprite;
         usualuseclass.SetStringArrayToTMP(ref playersName, PlayersName);
-
+        for(int i = 0;i < 5; i++) {
+            if (ShowZDCardsID[i] == -1)
+            {
+                ZXHDMXimages[i].sprite = GanDengYan.nullimage.sprite;
+                ZXHDMXtext[i].text = "";
+            }
+            else
+            {
+                if (IsZXH[i])
+                {
+                    string[] tempZXH = new string[0];
+                    usualuseclass.LoadTextToString(showZXHText, ref tempZXH);
+                    ZXHDMXimages[i].sprite=ZXH.sprite;
+                    ZXHDMXtext[i].text=tempZXH[ShowZDCardsID[i]];
+                }
+                else
+                {
+                    string[] tempDMX = new string[0];
+                    usualuseclass.LoadTextToString(showDMXText, ref tempDMX);
+                    ZXHDMXimages[i].sprite = DMX.sprite;
+                    ZXHDMXtext[i].text = tempDMX[ShowZDCardsID[i]];
+                }
+            }
+        }
+        usingPN.text = UsingPN;
     }
 }

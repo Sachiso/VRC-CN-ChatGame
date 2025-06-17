@@ -57,7 +57,7 @@ public class GanDengYan : UdonSharpBehaviour
     /// <summary>展示牌类型</summary>
     [UdonSynced] private pukestate ShowPukeType;
     /// <summary>展示牌的玩家名称</summary>
-    [UdonSynced] private string[] ShowPukePN = new string[6];
+    [UdonSynced] private int[] ShowPukePN = new int[6];
     /// <summary>当前使用的玩家名称在 PlayersName 数组中的索引</summary>
     [UdonSynced] private int UsingPNid;
     /// <summary>用于锁定出牌按钮</summary>
@@ -68,7 +68,10 @@ public class GanDengYan : UdonSharpBehaviour
     public GameObject[] JSbutton;
     void Start()
     {
-        if (Networking.IsOwner(gameObject))ResetAll();
+        if (Networking.IsOwner(gameObject))
+        {
+            ResetAll();
+        }
     }
     private int pukenumber(int CardsID)
     {
@@ -250,7 +253,7 @@ public class GanDengYan : UdonSharpBehaviour
             }
             return;
         }
-        if (ShowPukePN[0] == "" || ShowPukePN[0] == Networking.LocalPlayer.displayName)
+        if (ShowPukePN[0] == UsingPNid || ShowPukePN[0] == -1)
         {   //首先判断自己是否首发，以及上一次出牌是否是自己
             ShowPukeType = MinePukeState;
         }
@@ -472,7 +475,7 @@ public class GanDengYan : UdonSharpBehaviour
             if (forsavedlength>i )
             {
                 ShowPukeID[i] = savedMineSelectCardID[i];
-                ShowPukePN[i] = Networking.LocalPlayer.displayName;
+                ShowPukePN[i] = UsingPNid;
             }
             else
             {
@@ -484,11 +487,11 @@ public class GanDengYan : UdonSharpBehaviour
     public void PassMyTurn()
     {
         //当我是上一个打出者、我不是当前操作玩家、游戏结束时不进行任何操作
-        if (ShowPukePN[0] == Networking.LocalPlayer.displayName
-            ||PlayersName[UsingPNid] != Networking.LocalPlayer.displayName || GameOver) return;
+        if (ShowPukePN[0] == UsingPNid
+            || PlayersName[UsingPNid] != Networking.LocalPlayer.displayName || GameOver) return;
         if (!usualuseclass.IsSetOwn(gameObject)) return;
         UsingPNid = (UsingPNid + 1) % PlayersCount;//切换到下一个玩家
-        if (PlayersName[UsingPNid] == ShowPukePN[0])//当下一位玩家是上一个打牌者时，给他加一张
+        if (UsingPNid == ShowPukePN[0])//当下一位玩家是上一个打牌者时，给他加一张
         {
             Cardscount--;
             if (Cardscount == -2)
@@ -548,7 +551,7 @@ public class GanDengYan : UdonSharpBehaviour
         usualuseclass.ResetIntToInt(ref PlayersPukeNub, -1);
         usualuseclass.ResetIntToInt(ref ShowPukeID, -1);
         ShowPukeType = 0;
-        usualuseclass.ResetStringToStringArray(ref ShowPukePN,"");//初始化展示牌的四变量
+        usualuseclass.ResetIntToInt(ref ShowPukePN, -1); ;//初始化展示牌的四变量
         UsingPNid = 0;
         GameOver = false;
         Reset = false;
@@ -567,6 +570,7 @@ public class GanDengYan : UdonSharpBehaviour
         usualuseclass.ResetIntToInt(ref PlayersPukeNub, -1);
         usualuseclass.ResetIntToInt(ref ShowPukeID, -1);
         usualuseclass.ResetStringToStringArray(ref PlayersCardsID, "-2 -2 -2 -2 -2 -2");
+        usualuseclass.ResetIntToInt(ref ShowPukePN, -1);
         GameOver = true;//锁定出牌按钮
         Reset = true;//清空玩家手牌
         RequestSerialization();
@@ -651,7 +655,8 @@ public class GanDengYan : UdonSharpBehaviour
             {
                 showcards[i].sprite = allpuke[ShowPukeID[i]].sprite;
             }
-            playersNameforCard[i].text=ShowPukePN[i];
+            if (ShowPukePN[i] == -1) playersNameforCard[i].text = "";
+            else playersNameforCard[i].text=PlayersName[ShowPukePN[i]];
         }
     }
     private void CopyToWorld()

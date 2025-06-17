@@ -13,8 +13,7 @@ public class FollowPlayer : UdonSharpBehaviour
     void Start()
     {
         string[] savedPN = new string[2];
-        int temp = 0;
-        usualuseclass.LoadTextToString(savedplayername, ref savedPN,ref temp);
+        usualuseclass.LoadTextToString(savedplayername, ref savedPN);
         // 获取所有玩家
         VRCPlayerApi[] players = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
         VRCPlayerApi.GetPlayers(players);

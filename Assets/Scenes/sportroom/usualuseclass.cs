@@ -10,7 +10,7 @@ using TMPro;
 public static class usualuseclass 
 {
     //将text组件的文本内容获取到string[]
-    public static void LoadTextToString(Text getText, ref string[] usingText,ref int length)
+    public static void LoadTextToString(Text getText, ref string[] usingText)
     {
         // 从Text组件中获取所有问题，并按行分割
         string[] lines = getText.text.Split('\n');
@@ -19,6 +19,7 @@ public static class usualuseclass
         {
             if (!string.IsNullOrEmpty(line.Trim())) validCount++;
         }
+        usingText= new string[validCount];
         int index = 0;
         foreach (string line in lines)
         {
@@ -28,8 +29,6 @@ public static class usualuseclass
                 usingText[index++] = trimmed;
             }
         }
-        length = index;
-
     }
     //随机打乱一个string[]内的数据
     public static void SetRandomString(ref string[] ForRandom,int length)

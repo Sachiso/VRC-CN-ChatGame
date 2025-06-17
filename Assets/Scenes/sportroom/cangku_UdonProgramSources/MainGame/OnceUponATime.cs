@@ -38,7 +38,10 @@ public class OnceUponATime : UdonSharpBehaviour
     public TextMeshProUGUI CopyToTMPForUPN;
     void Start()//初始化所有空数据
     {
-        if (Networking.IsOwner(gameObject))ResetAll();
+        if (Networking.IsOwner(gameObject))
+        {
+            ResetAll();
+        }
     }
 
     public void ResetAll()//重置所有卡牌，一共五个板块，分别是showcards、minecards，usingPN、showcardPN和PNInGames
