@@ -34,8 +34,7 @@ public class getanswer : UdonSharpBehaviour
     }
     public void Redbutton()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
+        if(!usualuseclass.IsSetOwn(gameObject))return;
         playerid = Networking.LocalPlayer.playerId;
         isBlue = false;
         isButton = true;
@@ -44,8 +43,7 @@ public class getanswer : UdonSharpBehaviour
     }
     public void Resetall()//重置所有
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         isBlue = true;
         isButton = true;
         RequestSerialization();
@@ -53,8 +51,7 @@ public class getanswer : UdonSharpBehaviour
     }
     public void SetGOleftbutton()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         isLeft = true;
         isButton = false;
         RequestSerialization();
@@ -62,8 +59,7 @@ public class getanswer : UdonSharpBehaviour
     }
     public void SetGOrightbutton()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         isLeft = false;
         isButton = false;
         RequestSerialization();

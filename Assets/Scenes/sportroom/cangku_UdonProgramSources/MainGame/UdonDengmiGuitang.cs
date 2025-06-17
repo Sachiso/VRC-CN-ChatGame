@@ -16,10 +16,12 @@ public class UdonDengmiGuitang : UdonSharpBehaviour
     public Text DengmiAnswer;//存储灯谜的答案文本组件
     public Text DengmiQuestion;//存储灯谜的问题文本组件
     public TextMeshProUGUI[] Title;//个人面板的标题文本组件
-    string[] DManswers = new string[0];//存储灯谜的答案的数组
-    string[] DMquestions = new string[0];//存储灯谜的问题的数组
-    string[] HGanswers = new string[0];//存储海龟汤的答案的数组
-    string[] HGquestions = new string[0];//存储海龟汤的问题的数组
+    string[] DManswers = new string[200];//存储灯谜的答案的数组
+    string[] DMquestions = new string[200];//存储灯谜的问题的数组
+    string[] HGanswers = new string[200];//存储海龟汤的答案的数组
+    string[] HGquestions = new string[200];//存储海龟汤的问题的数组
+    [UdonSynced] int DMlength=0;
+    [UdonSynced] int HGlength=0;
     [UdonSynced] int DMint = 0;//灯谜的索引
     [UdonSynced] int HGint = 0;//海龟汤的索引
     [UdonSynced] bool isDM = true;//是否为灯谜
@@ -27,21 +29,20 @@ public class UdonDengmiGuitang : UdonSharpBehaviour
 
     void Start()
     {
-        LoadTextToString(HaiguiAnswer, ref HGanswers);
-        LoadTextToString(HaiguiQuestion, ref HGquestions);
-        LoadTextToString(DengmiQuestion, ref DMquestions);
-        LoadTextToString(DengmiAnswer, ref DManswers);
+        LoadTextToString(HaiguiAnswer, ref HGanswers,ref HGlength);
+        LoadTextToString(HaiguiQuestion, ref HGquestions, ref HGlength);
+        LoadTextToString(DengmiQuestion, ref DMquestions, ref DMlength);
+        LoadTextToString(DengmiAnswer, ref DManswers, ref DMlength);
         isDM = true;
         //将灯谜和海龟汤的问题和答案加载到数组中
     }
     public void GetQuestionAndSetOwner()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         if (isDM)
         {
             DMint--;
-            if (DMint < 0) DMint = DMquestions.Length - 1;
+            if (DMint < 0) DMint = DMlength - 1;
             for (int i = 0; i < displayquestion.Length; i++)
             {
                 displayquestion[i].text = DMint + "、" + DMquestions[DMint];
@@ -51,7 +52,7 @@ public class UdonDengmiGuitang : UdonSharpBehaviour
         else
         {
             HGint--;
-            if (HGint < 0) HGint = HGquestions.Length - 1;
+            if (HGint < 0) HGint = HGlength - 1;
             for (int i = 0; i < displayquestion.Length; i++)
             {
                 displayquestion[i].text =HGint+"、"+ HGquestions[HGint];

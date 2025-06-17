@@ -14,8 +14,7 @@ public class UploadforInputB : UdonSharpBehaviour
     [UdonSynced] private string saved;
     public override void Interact()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
+        if(!usualuseclass.IsSetOwn(gameObject))return;
         saved = forcustom.text;
         saved += $"\nBy:{Networking.LocalPlayer.displayName}";
         RequestSerialization();

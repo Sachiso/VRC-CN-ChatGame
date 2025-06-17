@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
+using static usualuseclass;
 
 public class onlyoneswitch : UdonSharpBehaviour
 {
@@ -18,7 +19,7 @@ public class onlyoneswitch : UdonSharpBehaviour
     }
     public override void Interact() // 点击交互时调用
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject); // 设置对象所有权
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         oosw = !oosw;
         if (foron != null && foroff != null)
         {

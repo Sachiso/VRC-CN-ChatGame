@@ -9,7 +9,7 @@ public class redbutton : UdonSharpBehaviour
     public UdonBehaviour udonBehaviour;
     public override void Interact()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         udonBehaviour.SendCustomEvent("Redbutton");
     }
    

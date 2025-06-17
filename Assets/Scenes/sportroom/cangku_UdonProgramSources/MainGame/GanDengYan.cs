@@ -1,10 +1,12 @@
 ﻿
+using System;
 using TMPro;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
+using static usualuseclass;
 
 enum pukestate { None,One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom,}
 public class GanDengYan : UdonSharpBehaviour
@@ -39,15 +41,17 @@ public class GanDengYan : UdonSharpBehaviour
     /// <summary>玩家数量</summary>
     [UdonSynced] private int PlayersCount = 0;
     /// <summary>用于存储玩家手牌ID</summary>
-    private int[] MyCardsID = new int[6];
+    private string[] MyCardsID = new string[6];
     /// <summary>用于存储玩家选择的卡牌ID</summary>
     private int[] MySelectCardsID = new int[6];
+    /// <summary>用于存储所有玩家的卡牌ID，转换成int进行获取</summary>
+    [UdonSynced]private string[] PlayersCardsID= new string[8];
     /// <summary>所有卡牌ID,用于乱序索引，id指向allpuke数组</summary>
     [UdonSynced] private int[] AllCardsID = new int[108];
     /// <summary>剩余卡牌数</summary>
     [UdonSynced] private int Cardscount = 107;
     /// <summary>玩家吐牌数字，用作对比,动态变化</summary>
-    [UdonSynced] private int[] PlayersPukeNub = new int[0];
+    [UdonSynced] private int[] PlayersPukeNub = new int[6];
     /// <summary>展示牌ID索引，索引到allpuke数组</summary>
     [UdonSynced] private int[] ShowPukeID = new int[6];
     /// <summary>展示牌类型</summary>
@@ -58,22 +62,13 @@ public class GanDengYan : UdonSharpBehaviour
     [UdonSynced] private int UsingPNid;
     /// <summary>用于锁定出牌按钮</summary>
     [UdonSynced] private bool GameOver = true;
-    /// <summary>判断新游戏初始化</summary>
-    [UdonSynced] private bool IsNewGame = false;
-    /// <summary>判断加牌逻辑</summary>
-    [UdonSynced] private bool IsAdd = false;
     /// <summary>对玩家手牌进行初始化</summary>
     [UdonSynced] private bool Reset = false;
     //以上是游戏数据相关的变量
     public GameObject[] JSbutton;
     void Start()
     {
-        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject)) return;
-        for (int i = 0; i < 108;)
-        {
-            AllCardsID[i] = i++;
-        }
-        ResetAll();
+        if (Networking.IsOwner(gameObject))ResetAll();
     }
     private int pukenumber(int CardsID)
     {
@@ -216,7 +211,7 @@ public class GanDengYan : UdonSharpBehaviour
     public void ShowCardsFromPrivate()
     {   //进行复杂的三重判定，第一重为玩家是否首发，第二重鉴定牌型是否正确，打出后游戏是否结束
         if (PlayersName[UsingPNid] != Networking.LocalPlayer.displayName || GameOver) return;//判定是否是自己操作与游戏结束
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         int forsavedlength = 0;//用于获取出牌长度
         for (int i = 0; i < 6; i++)
         {
@@ -302,6 +297,8 @@ public class GanDengYan : UdonSharpBehaviour
         YouCanShow(savedMineSelectCardID, forsavedlength);
         //最后判定游戏是否结束，如果玩家手牌数为0，则游戏结束并计算分数
         PlayersCardCount[UsingPNid] -= forsavedlength;//更新玩家手牌数量记录
+        usualuseclass.ClearAndResetStringOrderFromeSelect(ref MyCardsID, ref MySelectCardsID, -1, -2);
+        PlayersCardsID[UsingPNid] = string.Join(" ", MyCardsID);
         if (PlayersCardCount[UsingPNid] == 0)
         {
             GameOver = true;//如果玩家手牌数为0，则游戏结束
@@ -321,28 +318,8 @@ public class GanDengYan : UdonSharpBehaviour
         }
         else
             UsingPNid = (UsingPNid + 1) % PlayersCount;//切换到下一个玩家
-        IsNewGame = false;
-        IsAdd = false;
+        
         RequestSerialization();
-        for (int i = 0; i < 6; i++)//清除玩家手牌中打出牌的显示
-        {
-            if (MySelectCardsID[i] != -1)
-            {
-                MyCardsID[i] = -2;
-                MySelectCardsID[i] = -1;//初始化自身状态
-            }
-        }
-        for (int i = 0; i < 5; i++)//清除玩家手牌中打出牌的显示
-        {
-            for (int j = 0; j < 5-i; j++)
-            {
-                if(MyCardsID[j] == -2)//如果有重复的卡牌则将其置为-2
-                {
-                    MyCardsID[j] = MyCardsID[j+1];
-                    MyCardsID[j + 1] = -2;//将重复的卡牌置为-2
-                }
-            }
-        }
         Setall();
     }
     private bool CanIShow(int[] savedMineSelectCardID, int forsavedlength)
@@ -485,7 +462,6 @@ public class GanDengYan : UdonSharpBehaviour
     private void YouCanShow(int[] savedMineSelectCardID,int forsavedlength)
     {
         int savedcount = 0;
-        PlayersPukeNub = new int[savedMineSelectCardID.Length];
         foreach (int i in savedMineSelectCardID)//存储出牌的数字
         {
             PlayersPukeNub[savedcount]= pukenumber(i);
@@ -510,96 +486,88 @@ public class GanDengYan : UdonSharpBehaviour
         //当我是上一个打出者、我不是当前操作玩家、游戏结束时不进行任何操作
         if (ShowPukePN[0] == Networking.LocalPlayer.displayName
             ||PlayersName[UsingPNid] != Networking.LocalPlayer.displayName || GameOver) return;
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         UsingPNid = (UsingPNid + 1) % PlayersCount;//切换到下一个玩家
         if (PlayersName[UsingPNid] == ShowPukePN[0])//当下一位玩家是上一个打牌者时，给他加一张
         {
-            IsAdd = true;
             Cardscount--;
-            PlayersCardCount[UsingPNid]++;
             if (Cardscount == -2)
             {
-                SetCardRandom();
+                usualuseclass.SetRandomInt(ref AllCardsID,108);
                 Cardscount = 106;
             }
+            string[] setme = new string[6];
+            setme = PlayersCardsID[UsingPNid].Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            setme[PlayersCardCount[UsingPNid]] = AllCardsID[Cardscount+1].ToString();
+            PlayersCardCount[UsingPNid]++;
+            PlayersCardsID[UsingPNid]=string.Join(" ", setme);
         }
-        else
-            IsAdd = false;
         RequestSerialization();
         Setall();
     }
     public void JoinGame()
     {
         if (!GameOver||PlayersCount==8) return;
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         PlayersName[PlayersCount] = Networking.LocalPlayer.displayName;
         PlayersCount++;
         RequestSerialization();
         Setall();
     }
-    private void SetCardRandom()
-    {
-        for (int i = 0; i < 108; i++)
-        {
-            int randomIndex = UnityEngine.Random.Range(i, AllCardsID.Length);
-            int temp = AllCardsID[i];
-            AllCardsID[i] = AllCardsID[randomIndex];
-            AllCardsID[randomIndex] = temp;
-        }
-    }
     public void SetNewGame()
     {
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
-        SetCardRandom();//针对AllCardsID随机洗牌
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
+        usualuseclass.SetRandomInt(ref AllCardsID,108);//针对AllCardsID随机洗牌
         string[] CPPlayersName = new string[8] {"", "", "", "", "", "", "", "",};//用于重新排序玩家
+        int[] CPPlayersScore = new int[8] {100,100,100,100,100,100,100,100};
         int setresetint = UsingPNid;
-        for (int i = 0; i < PlayersCount; i++)//重设玩家序列
+        for (int i = 0; i < PlayersCount; i++)//重设玩家序列，分数忘记设置了
         {
             CPPlayersName[i] = PlayersName[setresetint];
-            setresetint = (setresetint+1)%8;//防止溢出
-            if (PlayersName[setresetint] == "")
-            {
-                setresetint = 0;
-            }
+            CPPlayersScore[i] = PlayersScore[setresetint];
+            setresetint = (setresetint+1)% PlayersCount;//防止溢出
         }
-        PlayersName = CPPlayersName;
+        usualuseclass.SetStringArrayToStringArray(ref PlayersName, CPPlayersName,8);
         for (int i = 0; i < PlayersCount; i++)
         {
             if (PlayersName[i] == "") break;
             PlayersCardCount[i] = 5;
         }
         PlayersCardCount[0] = 6;//设置玩家手牌数量显示
-        Cardscount = 107 - 6 - 5 * PlayersCount;//设置卡牌书
-        PlayersPukeNub = new int[0];
-        ShowPukeID = new[] { -1, -1, -1, -1, -1, -1 };
+        for (int i = 0; i < PlayersCount; i++)//初始化玩家手牌的索引数组
+        {
+            PlayersCardsID[i] = "";
+            int k = 5; if (i == 0) k = 6;
+            for (int j = 0; j < k; j++)
+            {
+                PlayersCardsID[i] += AllCardsID[Cardscount--].ToString() + " ";
+            }
+            if (k == 5) 
+                PlayersCardsID[i] += "-2";
+        }
+        usualuseclass.ResetIntToInt(ref PlayersPukeNub, -1);
+        usualuseclass.ResetIntToInt(ref ShowPukeID, -1);
         ShowPukeType = 0;
-        ShowPukePN = new[] { "", "", "", "", "", "" };//初始化展示牌的四变量
+        usualuseclass.ResetStringToStringArray(ref ShowPukePN,"");//初始化展示牌的四变量
         UsingPNid = 0;
         GameOver = false;
-        IsNewGame = true;
-        IsAdd = false;
         Reset = false;
         RequestSerialization();
         Setall();
     }//重置游戏数据
     public void ResetAll()
     {
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
-        for (int i = 0; i < 8; i++)//初始化玩家列表变量
-        {
-            PlayersName[i]="";
-            PlayersScore[i] = 100;
-            PlayersCardCount[i] = 0;
-        }
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
+        usualuseclass.SetIntOrder(ref AllCardsID);
+        usualuseclass.ResetStringToStringArray(ref PlayersName,"");
+        usualuseclass.ResetIntToInt(ref PlayersScore, 100);
+        usualuseclass.ResetIntToInt(ref PlayersCardCount, 0);
         UsingPNid = 0;//重置使用玩家ID
         PlayersCount = 0;
-        PlayersPukeNub = new int[0];//初始化玩家打出的牌
-        for (int i = 0; i < 6; i++)
-        {
-            ShowPukeID[i] = -1;//初始化展示牌ID
-        }
+        usualuseclass.ResetIntToInt(ref PlayersPukeNub, -1);
+        usualuseclass.ResetIntToInt(ref ShowPukeID, -1);
+        usualuseclass.ResetStringToStringArray(ref PlayersCardsID, "-2 -2 -2 -2 -2 -2");
         GameOver = true;//锁定出牌按钮
-        IsNewGame =false;//不让新游戏开始
         Reset = true;//清空玩家手牌
         RequestSerialization();
         Setall();
@@ -611,13 +579,9 @@ public class GanDengYan : UdonSharpBehaviour
     private void Setall()
     {
         SetJSButton();
-        if (IsAdd&& PlayersName[UsingPNid] == Networking.LocalPlayer.displayName)//当加牌时
-        {
-                MyCardsID[PlayersCardCount[UsingPNid]-1] = AllCardsID[Cardscount + 1];
-        }
         usingPN.text = PlayersName[UsingPNid];//更新当前使用的玩家名称
-        SetMe();
         SetInGamePlayer();//更新玩家列表信息
+        SetMe();
         Setshowcards();//更新显示卡牌信息
         CopyToWorld();
     }
@@ -634,7 +598,6 @@ public class GanDengYan : UdonSharpBehaviour
                 JSbutton[3].SetActive(true);
                 ishide = false;
                 break;
-
             }
         if (ishide)
         {
@@ -646,45 +609,25 @@ public class GanDengYan : UdonSharpBehaviour
     }
     private void SetMe()
     {
-        if (Reset)
+        if (Reset)usualuseclass.ResetIntToInt(ref MySelectCardsID, -1);
+        int MyNub = 0;
+        foreach (string s in PlayersName) { if (s == Networking.LocalPlayer.displayName) break; MyNub++; }
+        if (MyNub == 8)
         {
             for (int i = 0; i < 6; i++)
-            {
-                MyCardsID[i] = -1;//初始化玩家手牌ID
-                MySelectCardsID[i] = -1;//初始化玩家选择的卡牌ID
-            }
+                minecards[i].sprite = nullimage.sprite;
         }
-        else if (IsNewGame)//新游戏开始时重置玩家手牌
+        else
         {
-            for (int i = 0; i < 8; i++)
+            string[] temp = PlayersCardsID[MyNub].Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            usualuseclass.SetStringArrayToStringArray(ref MyCardsID, temp,6);
+            for (int i = 0; i < 6; i++)
             {
-                if (Networking.LocalPlayer.displayName == PlayersName[i])
-                {
-                    if (i == 0)
-                    {
-                        for (int j = 0; j < 6; j++)
-                        {
-                            MyCardsID[j] = AllCardsID[107 - j];//存储玩家手牌ID
-                            MySelectCardsID[j] = -1;
-                        }
-                    }
-                    else
-                    {
-                        for (int j = 0; j < 5; j++)
-                        {
-                            MyCardsID[j] = AllCardsID[101 - 5 * (i - 1) - j];//存储玩家手牌ID
-                            MySelectCardsID[j] = -1;
-                        }
-                    }
-                }
+                if (MyCardsID[i] == "-1" || MyCardsID[i] == "-2") minecards[i].sprite = nullimage.sprite;//如果玩家手牌ID为-1、-2，则显示空白图片
+                else minecards[i].sprite = allpuke[int.Parse(MyCardsID[i])].sprite;
+                if (MySelectCardsID[i] != -1) minecards[i].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f);//初始化玩家选择的卡牌ID
+                else minecards[i].color = Color.white;
             }
-        }
-        for (int i = 0; i < 6; i++)
-        {
-            if (MyCardsID[i] == -1 || MyCardsID[i]==-2)minecards[i].sprite = nullimage.sprite;//如果玩家手牌ID为-1、-2，则显示空白图片
-            else minecards[i].sprite = allpuke[MyCardsID[i]].sprite;
-            if(MySelectCardsID[i] != -1) minecards[i].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f);//初始化玩家选择的卡牌ID
-            else minecards[i].color = Color.white;
         }
     }
     private void SetInGamePlayer()
@@ -729,18 +672,11 @@ public class GanDengYan : UdonSharpBehaviour
         }
         copytoUingPN.text = usingPN.text;
     }
-    private VRCPlayerApi GetOwn()
-    {
-        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject))
-        {
-            Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        }
-        return Networking.LocalPlayer;
-    }
+
     private void SetminecardForSelect(int ForSelectMineCardID)
     {
-        if (GameOver|| MyCardsID[ForSelectMineCardID] == -2) return;
-        if (MyCardsID[ForSelectMineCardID] == MySelectCardsID[ForSelectMineCardID])
+        if (GameOver|| int.Parse(MyCardsID[ForSelectMineCardID]) == -2) return;
+        if (int.Parse(MyCardsID[ForSelectMineCardID]) == MySelectCardsID[ForSelectMineCardID])
         {
             MySelectCardsID[ForSelectMineCardID] = -1;
             minecards[ForSelectMineCardID].color = Color.white;//取消选择时恢复颜色
@@ -748,7 +684,7 @@ public class GanDengYan : UdonSharpBehaviour
         }//如果选择的卡牌ID和手牌ID相同，则取消选择
         else
         {
-            MySelectCardsID[ForSelectMineCardID] = MyCardsID[ForSelectMineCardID];
+            MySelectCardsID[ForSelectMineCardID] = int.Parse(MyCardsID[ForSelectMineCardID]);
             minecards[ForSelectMineCardID].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f);//选择时变为黄色
             copytoMinecards[ForSelectMineCardID].color = minecards[ForSelectMineCardID].color;
         }

@@ -22,7 +22,7 @@ public class stepudsw : UdonSharpBehaviour
 
     public override void Interact()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        if(!usualuseclass.IsSetOwn(gameObject))return;
         // 如果正在移动，不执行任何操作
         if (transitionTimer < transitionDuration)
         {

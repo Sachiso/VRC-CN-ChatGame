@@ -38,21 +38,14 @@ public class OnceUponATime : UdonSharpBehaviour
     public TextMeshProUGUI CopyToTMPForUPN;
     void Start()//初始化所有空数据
     {
-        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject)) return;
-        for (int i = 0; i < NcardID.Length;i++)
-        {
-            NcardID[i] = i;
-        }
-        for (int i = 0; i < TcardID.Length;i++)
-        {
-            TcardID[i] = i;
-        }
-        ResetAll();
+        if (Networking.IsOwner(gameObject))ResetAll();
     }
 
     public void ResetAll()//重置所有卡牌，一共五个板块，分别是showcards、minecards，usingPN、showcardPN和PNInGames
     {
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
+        usualuseclass.SetIntOrder(ref NcardID);
+        usualuseclass.SetIntOrder(ref TcardID);
         InGameCount = 0;
         gameover = false;
         isadd = false;
@@ -61,16 +54,11 @@ public class OnceUponATime : UdonSharpBehaviour
             minecards[i].sprite = nullimage.sprite;
             ForSelectNTID[i]= -1;
         }
-        for (int i = 0; i < 8; i++)
-        {
-            PNInGames[i] = "";
-        }
-        for (int i = 0; i < 5; i++)
-        {
-            ShowcardID[i] = -1;
-            ShowcardPN[i] = "";
-        }
-        SetCardRandom();
+        usualuseclass.ResetStringToStringArray(ref PNInGames,"");
+        usualuseclass.ResetStringToStringArray(ref ShowcardPN,"");
+        usualuseclass.ResetIntToInt(ref ShowcardID, -1);
+        usualuseclass.SetRandomInt(ref NcardID,100);
+        usualuseclass.SetRandomInt(ref TcardID,8);
         Ncardcount = 99;
         Tcardcount = 7;
         UsingPN = "空";
@@ -84,7 +72,7 @@ public class OnceUponATime : UdonSharpBehaviour
         {
             if(PNInGames[i] == Networking.LocalPlayer.displayName) return;
         }
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         PNInGames[InGameCount] = Networking.LocalPlayer.displayName;
         if (InGameCount == 0)
         {
@@ -104,7 +92,7 @@ public class OnceUponATime : UdonSharpBehaviour
             }
         }
         ForSelectNTID[0] = TcardID[Tcardcount];
-        minecards[0].sprite = targetcards[Tcardcount].sprite;
+        minecards[0].sprite = targetcards[ForSelectNTID[0]].sprite;
         MineCardscount = 5;
         Ncardcount -=4;
         Tcardcount--;
@@ -122,7 +110,6 @@ public class OnceUponATime : UdonSharpBehaviour
         for (int i = 0; i < 20; i++)
         {
             CopyTominecards[i].color = (minecards[i].color = Color.white);
-            
         }
         if (ForSelectMineCardint != -1)
         {
@@ -141,7 +128,7 @@ public class OnceUponATime : UdonSharpBehaviour
             if (Networking.LocalPlayer.displayName == PNInGames[i]) break;
             else if (i == 7) return;
         }
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         int savedcardID = ForSelectNTID[ForSelectMineCardint];//保存的当前选中卡牌的ID
         if (savedcardID >= 96)//加牌卡牌的条件
         {
@@ -247,6 +234,7 @@ public class OnceUponATime : UdonSharpBehaviour
                             MineCardscount++;
                             Ncardcount--;
                         }
+                        if (MineCardscount == 20)break;
                     }
                 }
                 break;
@@ -264,7 +252,7 @@ public class OnceUponATime : UdonSharpBehaviour
             if (Networking.LocalPlayer.displayName == PNInGames[i]) break;
             else if (i == 7) return;
         }
-        if (!Networking.IsOwner(GetOwn(),gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         isadd = false;
         if (Ncardcount >= 0 && MineCardscount <= 19)
         {
@@ -353,23 +341,6 @@ public class OnceUponATime : UdonSharpBehaviour
             TMPforPlayerInGame[i].text = $"{i+1}.{PNInGames[i]}";
         }
     }
-    private void SetCardRandom()//随机化NcardID和TcardID数组的顺序
-    {
-        for (int i = 0; i < NcardID.Length; i++)
-        {
-            int randomIndex = Random.Range(i, NcardID.Length);
-            int temp = NcardID[i];
-            NcardID[i] = NcardID[randomIndex];
-            NcardID[randomIndex] = temp;
-        }
-        for (int i = 0; i < TcardID.Length; i++)
-        {
-            int randomIndex = Random.Range(i, TcardID.Length);
-            int temp = TcardID[i];
-            TcardID[i] = TcardID[randomIndex];
-            TcardID[randomIndex] = temp;
-        }
-    }
     private void CopyToWorld()
     {
         int i;
@@ -391,14 +362,7 @@ public class OnceUponATime : UdonSharpBehaviour
         }
         CopyToTMPForUPN.text = TMPForUPN.text;
     }
-    private VRCPlayerApi GetOwn()
-    {
-        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject))
-        {
-            Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        }
-        return Networking.LocalPlayer;
-    }
+   
     public void Selectminecard0() { SetminecardForSelect(0); }
     public void Selectminecard1() { SetminecardForSelect(1); }
     public void Selectminecard2() { SetminecardForSelect(2); }

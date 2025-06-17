@@ -3,6 +3,7 @@ using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
+using static usualuseclass;
 public class pCube1 : UdonSharpBehaviour
 {
     /*简单学习一下：
@@ -18,8 +19,7 @@ public class pCube1 : UdonSharpBehaviour
     [UdonSynced] private int show = 0;
     public override void Interact()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
+        if(!usualuseclass.IsSetOwn(gameObject))return;
         if (Time.time - starttime <= 1.5f) return;
         setback = !setback;
         starttime=Time.time;
@@ -33,6 +33,7 @@ public class pCube1 : UdonSharpBehaviour
     }
     private void ForButton(int setint)
     {
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         show = setint;
         RequestSerialization();
         showthat();
@@ -58,7 +59,7 @@ public class pCube1 : UdonSharpBehaviour
             TMPUP.SetActive(true);
         }
     }
-    public void CAB() { Networking.SetOwner(Networking.LocalPlayer, gameObject); if (!Networking.IsOwner(gameObject)) return; ForButton(0); }
-    public void O1B() { Networking.SetOwner(Networking.LocalPlayer, gameObject); if (!Networking.IsOwner(gameObject)) return; ForButton(1); }
-    public void O2B() { Networking.SetOwner(Networking.LocalPlayer, gameObject); if (!Networking.IsOwner(gameObject)) return; ForButton(2); }
+    public void CAB() { ForButton(0); }
+    public void O1B() { ForButton(1); }
+    public void O2B() { ForButton(2); }
 }

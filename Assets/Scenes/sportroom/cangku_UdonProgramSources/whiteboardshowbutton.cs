@@ -12,6 +12,7 @@ public class whiteboardshowbutton : UdonSharpBehaviour
     [UdonSynced] private int show = 0;
 
     private void ForButton(int setint) {
+        if(!usualuseclass.IsSetOwn(gameObject)) {return; }
         show= setint;
         RequestSerialization();
         showthat();
@@ -41,7 +42,7 @@ public class whiteboardshowbutton : UdonSharpBehaviour
             TMPUP.SetActive(true);
         }
     }
-    public void CAB() { Networking.SetOwner(Networking.LocalPlayer, gameObject); if (!Networking.IsOwner(gameObject)) return; ForButton(0); }
-    public void O1B() { Networking.SetOwner(Networking.LocalPlayer, gameObject); if (!Networking.IsOwner(gameObject)) return; ForButton(1); }
-    public void O2B() { Networking.SetOwner(Networking.LocalPlayer, gameObject); if (!Networking.IsOwner(gameObject)) return; ForButton(2); }
+    public void CAB() { ForButton(0); }
+    public void O1B() { ForButton(1); }
+    public void O2B() { ForButton(2); }
 }

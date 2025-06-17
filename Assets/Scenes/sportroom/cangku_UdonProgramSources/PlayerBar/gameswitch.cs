@@ -13,7 +13,7 @@ public class gameswitch : UdonSharpBehaviour
     [UdonSynced] bool forSw = false;//是否开启
     private void Start()
     {
-        if (!Networking.IsOwner(Networking.LocalPlayer, gameObject)) return;
+        if (!Networking.IsOwner(gameObject)) return;
         setGOint = 0;//被控制的物体组索引
         forSw = false;//是否开启
         RequestSerialization();//请求同步
@@ -22,7 +22,7 @@ public class gameswitch : UdonSharpBehaviour
     //开关函数的主要调用
     private void SetObjectActive(int set, bool setB)
     {
-        if (!Networking.IsOwner(GetOwn(), gameObject)) return;
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         setGOint = set;//被控制的物体组索引
         forSw = setB;//是否开启
         RequestSerialization();//请求同步
@@ -36,11 +36,6 @@ public class gameswitch : UdonSharpBehaviour
     {
         foreach (GameObject go in gameObjects) go.SetActive(false);//关闭所有物体
         gameObjects[setGOint].SetActive(forSw);//开启指定物体
-    }
-    private VRCPlayerApi GetOwn()
-    {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        return Networking.LocalPlayer;
     }
     //下面是每个按钮的开关函数
     public void setfor0() { SetObjectActive(0, true); }

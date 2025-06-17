@@ -27,26 +27,27 @@ public class NGwordget : UdonSharpBehaviour
     //以下一个组不同步，所以重进时新对象不知道他们头顶的词,并且在每次他们重载时重新获取
     private GameObject[] objectlist = new GameObject[0];//物体列表不让同步
     [UdonSynced] private int forNGText=0;//存储获取词条序列，为0时重置
+    [UdonSynced] private int NGTextLength =0;//存储NG词的长度。
     [UdonSynced] private bool isnew;//是否为新玩家判定
     [UdonSynced] private string ownplayer;//所有者的name存储
     [UdonSynced] private int forlength;//判断ownplayer在哪一行
     [UdonSynced] private string[] playernamelist = new string[0];//玩家name列表
-    [UdonSynced] private string[] NGText=new string[0]; // 存储所有NG词的数组
+    [UdonSynced] private string[] NGText=new string[500]; // 存储所有NG词的数组
     [UdonSynced] private objectstate[] objectstates = new objectstate[0];//用于识别个体的状态，
     [UdonSynced] private int[] objectNGText = new int[0];//用于获取与玩家绑定的NG词序列，获取物体是赋予值
     //作为新对象加入游戏时重载所有对象物体，同步时不重载，只额外加入自己的。
     private void Start()
     {
-        if (NGText.Length == 0)
+        if (NGTextLength == 0)
         {
-            LoadTextToString(getText, ref NGText);//加载Text到存储string
-            SetRandomString(ref NGText);//随机化NGText
-            forNGText = NGText.Length;//初始化NG词序列最大值
+            usualuseclass.LoadTextToString(getText, ref NGText,ref NGTextLength);//加载Text到存储string
+            usualuseclass.SetRandomString(ref NGText,NGTextLength);//随机化NGText
+            forNGText = NGTextLength;//初始化NG词序列最大值
         }
     }
     public override void Interact()//点击事件
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject); // 设置对象所有权
+        if (!usualuseclass.IsSetOwn(gameObject)) return; ; // 设置对象所有权
         ownplayer = Networking.LocalPlayer.displayName;//获取所有者的名字
         isnew = true;//重置新玩家判定
         //判断自己在不在playernamelist内，也就是说判断自己是不是新玩家
@@ -66,9 +67,9 @@ public class NGwordget : UdonSharpBehaviour
             Setnewlist();//设置新的除物品外的表
             if (forNGText < 0)//当题库中无题库时重置并重新随机
             {
-                SetRandomString(ref NGText);//随机化NGText
+                usualuseclass.SetRandomString(ref NGText, NGTextLength);//随机化NGText
                 displayText.text = "当前题库为空，请其他人全部重新获取以防止显示错误";//增加提示词
-                forNGText = NGText.Length-1;
+                forNGText = NGTextLength - 1;
             }//设定状态参数。
             objectNGText[forlength] = forNGText;//对应玩家问题序列存储为最新
             //从头开始遍历，从头去生成一遍所有玩家的object
@@ -105,11 +106,10 @@ public class NGwordget : UdonSharpBehaviour
                         forNGText--;
                         if (forNGText < 0)//当题库中无题库时重置并重新随机
                         {
-                            LoadTextToString(getText, ref NGText);
-                            SetRandomString(ref NGText);
+                            SetRandomString(ref NGText, NGTextLength);
                             displayText.text = "当前题库为空，可选择提醒其他人全部重新获取以防止重复";
                             displayText.color = new Color(0.8f,0.8f,0f);
-                            forNGText = NGText.Length;
+                            forNGText = NGTextLength;
                             forNGText--;
                         }
                         objectNGText[forlength] = forNGText;

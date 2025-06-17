@@ -3,6 +3,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
+using static usualuseclass;
 
 namespace HoshinoLabs.IwaSync3.Udon
 {
@@ -11,7 +12,7 @@ namespace HoshinoLabs.IwaSync3.Udon
         public VideoController videoController;
         void Start()
         {
-            if (Networking.GetOwner(gameObject) == Networking.LocalPlayer)
+            if(Networking.IsOwner(gameObject))
             {
                 RequestSerialization();
                 videoController.LoopOn();

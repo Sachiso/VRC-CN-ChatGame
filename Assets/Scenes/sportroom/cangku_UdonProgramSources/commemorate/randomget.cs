@@ -56,7 +56,7 @@ public class randomget : UdonSharpBehaviour
             playerslist = new string[count];
             System.Array.Copy(playersInBox, playerslist, count);
             // 打乱玩家顺序
-            SetRandomString(ref playerslist);
+            SetRandomString(ref playerslist,playerslist.Length);
         }
         else playerslist = new string[0];
 

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
+using static usualuseclass;
 
 enum whoami { me,xe,other }//用于标记当前函数的执行者
 public class playervoidchanged : UdonSharpBehaviour
@@ -20,7 +21,7 @@ public class playervoidchanged : UdonSharpBehaviour
     public override void OnPlayerTriggerEnter(VRCPlayerApi player)//当玩家进入时触发
     {
         if (Networking.LocalPlayer != player) { return; }//我需要从进入玩家开始操作
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);//设置所有权
+        if(!usualuseclass.IsSetOwn(gameObject))return;
         setPN = player.displayName;//获取进入玩家的名称
         Setvoice();//在本地函数里设置其他人听到的我的声音范围
         isme = whoami.me;//标记当前函数的执行者
@@ -30,7 +31,7 @@ public class playervoidchanged : UdonSharpBehaviour
     public override void OnPlayerTriggerExit(VRCPlayerApi player)
     {
         if (Networking.LocalPlayer != player) return;
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);//设置所有权
+        if(!usualuseclass.IsSetOwn(gameObject))return;//设置所有权
         setPN = player.displayName;
         Resetvoice();
         isme = whoami.other;

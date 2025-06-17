@@ -18,7 +18,7 @@ public class TMTglobal : UdonSharpBehaviour
     }
     public void useme()
     {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject); // 设置对象所有权
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         if (localdisplayText.text != "") saved = localdisplayText.text;
         else saved = globaldisplayText.text;
         RequestSerialization();// 同步状态给所有客户端 

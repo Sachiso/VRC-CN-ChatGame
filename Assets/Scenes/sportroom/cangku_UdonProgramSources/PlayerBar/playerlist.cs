@@ -16,7 +16,6 @@ public class playerlist : UdonSharpBehaviour
     [UdonSynced] private string ForScoreShow = "";
     public TextMeshProUGUI[] PNSNS;
     private void Start(){ ShowTMP(); }
-    private void Setownshipplayer() { Networking.SetOwner(Networking.LocalPlayer,gameObject); }
     public override void OnPlayerLeft(VRCPlayerApi player)
     {
         for (int i = 0; i < playernamelist.Length; i++)
@@ -38,13 +37,13 @@ public class playerlist : UdonSharpBehaviour
         playernublist=new int[0];
         playerscorelist=new int[0];
         playernamelist = new string[0];
-        ForNubShow = ForScoreShow = "";
+        ForNubShow = "";ForScoreShow = "";
         RequestSerialization();
         ShowTMP();
     }
     public void SetnubRandom()
     {
-        Setownshipplayer();
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         int setlength=0;//我需要的长度，又或者说拥有序列的数量
         for(int i=0;i<playerscorelist.Length;)
         {
@@ -52,28 +51,16 @@ public class playerlist : UdonSharpBehaviour
             setlength = ++i;
         }
         if (setlength <=1) return;//没有多位玩家随机个什么东西？
+        
         int[] shuffledNub = new int[setlength];
-        System.Array.Copy(playernublist, shuffledNub, setlength);// 复制序列数组到临时数组
-        // 使用Fisher-Yates洗牌算法来打乱顺序
-        for (int i = setlength - 1; i > 0; i--)
-        {
-            
-            // 生成一个0到i之间的随机数
-            int j = UnityEngine.Random.Range(0, i + 1);
-            // 交换当前元素和随机位置的元素
-            int temp = shuffledNub[i];
-            shuffledNub[i] = shuffledNub[j];
-            shuffledNub[j] = temp;
-        }
-        // 将打乱后的数组赋值回原始数组
-        System.Array.Copy(shuffledNub, playernublist, setlength);
+        usualuseclass.SetRandomInt(ref playernublist, setlength);
         Setnub();
         RequestSerialization();
         ShowTMP();
     }
     public void Scoreplus()
     {
-        Setownshipplayer();
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         string LPname = Networking.LocalPlayer.displayName;
         for (int i = 0; i < playernamelist.Length; i++)
         {
@@ -90,7 +77,7 @@ public class playerlist : UdonSharpBehaviour
     }
     public void Scoreminus()
     {
-        Setownshipplayer();
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         string LPname = Networking.LocalPlayer.displayName;
         for (int i = 0; i < playernamelist.Length; i++)
         {
@@ -108,7 +95,7 @@ public class playerlist : UdonSharpBehaviour
     }
     public void Joingame()
     {
-        Setownshipplayer();
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         int isme = -1;
         int formin = -1;//用于寻找你在哪儿加入，你是第几个
         string LPname = Networking.LocalPlayer.displayName;//创建一个自己的名字方便调用
@@ -132,7 +119,7 @@ public class playerlist : UdonSharpBehaviour
     
     public void Exitresetme()
     {
-        Setownshipplayer();
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         int isme = -1;
         for (int i = playernamelist.Length-1; i>=0 ; i--)//找到自己
         {

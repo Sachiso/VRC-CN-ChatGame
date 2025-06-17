@@ -305,7 +305,7 @@ namespace HoshinoLabs.IwaSync3.Udon
 
                 if (privilege)
                 {
-                    if (Input.GetKeyDown(KeyCode.Space))
+                    if (Input.GetKeyDown(KeyCode.B))
                     {
                         if(core.isPlaying && !core.isLive && !core.isError)
                         {

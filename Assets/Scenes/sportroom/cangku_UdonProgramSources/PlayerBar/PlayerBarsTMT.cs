@@ -34,10 +34,9 @@ public class PlayerBarsTMT : UdonSharpBehaviour
     }
     public void Useudonupload()
     {
+        if (!usualuseclass.IsSetOwn(gameObject)) return;
         udonupload[SetType].SendCustomEvent("useme");
         forlocal.text = localtext[SetType].text;
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        if (!Networking.IsOwner(gameObject)) return;
         SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "setwhiteboard");
         setwhiteboard();
     }
