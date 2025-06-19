@@ -116,7 +116,7 @@ public class GanDengYan : UdonSharpBehaviour
         //如果首位是2，我们重新排序一下，保证顺子判定的正确性
         if (getspukenumber[0] == 15 && getspukenumber.Length > 1)
         {
-            for (int i = 0; i < getspukenumber.Length - 1 - zerocount; i++)
+            for (int i = 0; i < getspukenumber.Length - zerocount; i++)
                 if (getspukenumber[i] < 9) getspukenumber[i] += 13;//加倍判定长度，将比较范围重置到10-24
             for (int i = 0; i < getspukenumber.Length - 1-zerocount; i++)
             {
@@ -524,6 +524,7 @@ public class GanDengYan : UdonSharpBehaviour
         string[] CPPlayersName = new string[8] {"", "", "", "", "", "", "", "",};//用于重新排序玩家
         int[] CPPlayersScore = new int[8] {100,100,100,100,100,100,100,100};
         int setresetint = UsingPNid;
+        Cardscount = 107;
         for (int i = 0; i < PlayersCount; i++)//重设玩家序列，分数忘记设置了
         {
             CPPlayersName[i] = PlayersName[setresetint];
@@ -531,6 +532,7 @@ public class GanDengYan : UdonSharpBehaviour
             setresetint = (setresetint+1)% PlayersCount;//防止溢出
         }
         usualuseclass.SetStringArrayToStringArray(ref PlayersName, CPPlayersName,8);
+        usualuseclass.SetIntArrayToIntArray(ref PlayersScore, CPPlayersScore,8);
         for (int i = 0; i < PlayersCount; i++)
         {
             if (PlayersName[i] == "") break;

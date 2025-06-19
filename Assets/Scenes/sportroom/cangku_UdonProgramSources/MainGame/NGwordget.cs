@@ -40,9 +40,8 @@ public class NGwordget : UdonSharpBehaviour
     {
         if (NGTextLength == 0)
         {
-
             usualuseclass.LoadTextToString(getText, ref NGText);//加载Text到存储string
-
+            NGTextLength=NGText.Length;
             usualuseclass.SetRandomString(ref NGText,NGTextLength);//随机化NGText
             forNGText = NGTextLength;//初始化NG词序列最大值
         }

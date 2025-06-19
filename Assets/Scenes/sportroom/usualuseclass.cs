@@ -1,14 +1,24 @@
 ﻿
-using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 using UnityEngine.UI;
-using UnityEditor;
 using TMPro;
 
 public static class usualuseclass 
 {
+    public static int RandomWithoutExcept(int min, int max, int[] exception)
+    {
+        int range = max - min;
+        int index = Random.Range(0, range - exception.Length); // 在合法值序列中第 index 个
+        int skip = 0;
+        foreach (int i in exception)
+        {
+            if (i <= min + index + skip)
+                if(i !=-1)
+                    skip++;
+        }
+        return min + index + skip;
+    }
     //将text组件的文本内容获取到string[]
     public static void LoadTextToString(Text getText, ref string[] usingText)
     {

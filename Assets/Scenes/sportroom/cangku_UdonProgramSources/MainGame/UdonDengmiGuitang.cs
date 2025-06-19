@@ -31,8 +31,10 @@ public class UdonDengmiGuitang : UdonSharpBehaviour
     {
         LoadTextToString(HaiguiAnswer, ref HGanswers);
         LoadTextToString(HaiguiQuestion, ref HGquestions);
+        HGlength = HGquestions.Length;
         LoadTextToString(DengmiQuestion, ref DMquestions);
         LoadTextToString(DengmiAnswer, ref DManswers);
+        DMlength = DManswers.Length;
         isDM = true;
         //将灯谜和海龟汤的问题和答案加载到数组中
     }
