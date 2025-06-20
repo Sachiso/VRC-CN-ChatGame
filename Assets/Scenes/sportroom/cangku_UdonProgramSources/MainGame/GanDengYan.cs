@@ -1,8 +1,11 @@
 ﻿
 using System;
+using System.Threading;
 using TMPro;
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.InputSystem.Utilities;
+using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.Udon;
@@ -25,6 +28,7 @@ public class GanDengYan : UdonSharpBehaviour
     public TextMeshProUGUI[] copytoPlayersScore;
     public TextMeshProUGUI[] playersCardCount;
     public TextMeshProUGUI[] copytoPlayersCardCount;
+    public TextMeshProUGUI[] Tips;
     /// <summary>
     /// 存储所有卡牌的外部图片数组
     /// </summary>
@@ -94,7 +98,6 @@ public class GanDengYan : UdonSharpBehaviour
             default: return -1;//错误ID
         }
     }
-    
     private pukestate GetPukeType(in int[] getTypeSave,pukestate PKstate)
     {
         int zerocount = 0;//记录0的数量
@@ -550,6 +553,10 @@ public class GanDengYan : UdonSharpBehaviour
             if (k == 5) 
                 PlayersCardsID[i] += "-2";
         }
+        foreach(Image tempi in minecards)
+        {
+            tempi.color = Color.white;
+        }
         usualuseclass.ResetIntToInt(ref PlayersPukeNub, -1);
         usualuseclass.ResetIntToInt(ref ShowPukeID, -1);
         ShowPukeType = 0;
@@ -682,7 +689,7 @@ public class GanDengYan : UdonSharpBehaviour
 
     private void SetminecardForSelect(int ForSelectMineCardID)
     {
-        if (GameOver|| int.Parse(MyCardsID[ForSelectMineCardID]) == -2) return;
+        if (GameOver || int.Parse(MyCardsID[ForSelectMineCardID]) == -2) return;
         if (int.Parse(MyCardsID[ForSelectMineCardID]) == MySelectCardsID[ForSelectMineCardID])
         {
             MySelectCardsID[ForSelectMineCardID] = -1;
@@ -694,6 +701,186 @@ public class GanDengYan : UdonSharpBehaviour
             MySelectCardsID[ForSelectMineCardID] = int.Parse(MyCardsID[ForSelectMineCardID]);
             minecards[ForSelectMineCardID].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f);//选择时变为黄色
             copytoMinecards[ForSelectMineCardID].color = minecards[ForSelectMineCardID].color;
+        }
+        string temps = Networking.LocalPlayer.displayName;
+        if (usingPN.text != temps)
+            foreach (TextMeshProUGUI tips in Tips)
+            {
+                tips.text = "当前不该你操作"; tips.color = new Color(200f / 255f, 74f / 255f, 74f / 255f);
+            }
+        else
+        {
+            int forsavedlength = 0;//用于获取出牌长度
+            for (int i = 0; i < 6; i++)
+            {
+                if (MySelectCardsID[i] != -1)
+                    forsavedlength++;
+            }
+            if (forsavedlength == 0) return;//如果没有选择卡牌则不进行任何操作
+            int[] savedMineSelectCardID = new int[forsavedlength];
+            forsavedlength = 0;
+            foreach (int i in MySelectCardsID)
+                if (i != -1)
+                {
+                    savedMineSelectCardID[forsavedlength] = i;//存储玩家选择的卡牌ID
+                    forsavedlength++;
+                }
+            for (int i = 0; i < savedMineSelectCardID.Length - 1; i++)//按照id重新排序，0在最后2在最前
+            {
+                for (int j = 0; j < savedMineSelectCardID.Length - 1 - i; j++)
+                {
+                    if (savedMineSelectCardID[j] > savedMineSelectCardID[j + 1])
+                    {
+                        int temp = savedMineSelectCardID[j];
+                        savedMineSelectCardID[j] = savedMineSelectCardID[j + 1];
+                        savedMineSelectCardID[j + 1] = temp;
+                    }
+                }
+            }
+            string settips = "";
+            bool canshow = false;
+            if (ShowPukePN[0]==-1||PlayersName[ShowPukePN[0]] == temps)
+            {
+                canshow = true;
+                switch(GetPukeType(savedMineSelectCardID, pukestate.None))
+                {
+                    case pukestate.One:
+                        settips = "当前可出，牌型为：单张"; break;
+                    case pukestate.Two: 
+                        settips = "当前可出，牌型为：对子"; break;
+                    case pukestate.Three: 
+                        settips = "当前可出，牌型为：三张"; break;
+                    case pukestate.TwoTwo: 
+                        settips = "当前可出，牌型为：连对"; break;
+                    case pukestate.ThreeTwo: 
+                        settips = "当前可出，牌型为：三带二"; break;
+                    case pukestate.BoomOne: 
+                        settips = "当前可出，牌型为：四带一"; break;
+                    case pukestate.ThreeS: 
+                        settips = "当前可出，牌型为：三顺子"; break;
+                    case pukestate.FourS: 
+                        settips = "当前可出，牌型为：四顺子"; break;
+                    case pukestate.FiveS: 
+                        settips = "当前可出，牌型为：五顺子"; break;
+                    case pukestate.Boom: 
+                        settips = "当前可出，牌型为：炸弹"; break;
+                    case pukestate.FiveBoom: 
+                        settips = "当前可出，牌型为：超级炸弹"; break;
+                    case pukestate.SixBoom: 
+                        settips = "当前可出，牌型为：各种六张的牌型"; break;
+                    default: 
+                        settips = "牌型不合法"; canshow = false; break;
+                        //One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom
+                }
+            }
+            else
+            {
+                pukestate MinePukeState = GetPukeType(savedMineSelectCardID, ShowPukeType);//获取玩家选择的牌型
+                
+                switch (MinePukeState)
+                {
+                    case pukestate.One:
+                        settips = "当前牌型为：单张"; break;
+                    case pukestate.Two:
+                        settips = "当前牌型为：对子"; break;
+                    case pukestate.Three:
+                        settips = "当前牌型为：三张"; break;
+                    case pukestate.TwoTwo:
+                        settips = "当前牌型为：连对"; break;
+                    case pukestate.ThreeTwo:
+                        settips = "当前牌型为：三带二"; break;
+                    case pukestate.BoomOne:
+                        settips = "当前牌型为：四带一"; break;
+                    case pukestate.ThreeS:
+                        settips = "当前牌型为：三顺子"; break;
+                    case pukestate.FourS:
+                        settips = "当前牌型为：四顺子"; break;
+                    case pukestate.FiveS:
+                        settips = "当前牌型为：五顺子"; break;
+                    case pukestate.Boom:
+                        settips = "当前牌型为：炸弹"; break;
+                    case pukestate.FiveBoom:
+                        settips = "当前可出，牌型为：超级炸弹"; break;
+                    case pukestate.SixBoom:
+                        settips = "当前可出，牌型为：各种六张的牌型"; break;
+                    default:
+                        settips = "牌型不合法"; canshow = false; break;
+                        //One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom
+                }
+
+                switch (ShowPukeType)
+                {
+                    case pukestate.One:
+                        settips += "，场上为：单张"; break;
+                    case pukestate.Two:
+                        settips += "，场上为：对子"; break;
+                    case pukestate.Three:
+                        settips += "，场上为：三张"; break;
+                    case pukestate.TwoTwo:
+                        settips += "，场上为：连对"; break;
+                    case pukestate.ThreeTwo:
+                        settips += "，场上为：三带二"; break;
+                    case pukestate.BoomOne:
+                        settips += "，场上为：四带一"; break;
+                    case pukestate.ThreeS:
+                        settips += "，场上为：三顺子"; break;
+                    case pukestate.FourS:
+                        settips += "，场上为：四顺子"; break;
+                    case pukestate.FiveS:
+                        settips += "，场上为：五顺子"; break;
+                    case pukestate.Boom:
+                        settips += "，场上为：炸弹"; break;
+                    default:break;
+                        //One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom
+                }
+                if (MinePukeState != pukestate.None)
+                {
+                    switch (MinePukeState)
+                    {
+                        case pukestate.Boom:
+                            if (ShowPukeType != pukestate.Boom && ShowPukeType != pukestate.FiveBoom)
+                            {
+                                canshow = true;
+                                break;
+                            }
+                            else if (ShowPukeType == pukestate.Boom)
+                            {
+                                if (pukenumber(savedMineSelectCardID[0]) == 15 || pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1 || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
+                                {
+                                    canshow = true;
+                                    break;
+                                }
+                            }
+                            return;//如果对方牌比较大则不让出(判定了对方是4炸或5炸的情况与2的情况
+                        case pukestate.FiveBoom:
+                            if (ShowPukeType != pukestate.FiveBoom)
+                            {
+                                canshow = true;
+                                break;
+                            }
+                            else if (pukenumber(savedMineSelectCardID[0]) == 15 || pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1 || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
+                            {
+                                canshow = true;
+                                break;
+                            }
+                            return;
+                        default: break;
+                    }//炸弹判定完成
+                    if (MinePukeState == ShowPukeType)
+                    {
+                        if (CanIShow(savedMineSelectCardID, forsavedlength)) canshow = true;
+                    }
+                }
+                if (!canshow) { settips += ",当前可出"; }
+            }
+            foreach (TextMeshProUGUI tips in Tips)
+            {
+                tips.text = settips;
+                if (!canshow)
+                    tips.color = new Color(200f / 255f, 74f / 255f, 74f / 255f);
+                else 
+                    tips.color = Color.green;
+            }
         }
     }
     public void Selectminecard0() { SetminecardForSelect(0); }

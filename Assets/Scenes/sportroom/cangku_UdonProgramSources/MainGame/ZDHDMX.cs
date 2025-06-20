@@ -9,9 +9,11 @@ public class ZDHDMX : UdonSharpBehaviour
 {
     public Text showZXHText;//读取的真心话
     public Text showDMXText;//读取的大冒险
+    public Text showNormalText;
     public GanDengYan GanDengYan;//读取空卡牌和扑克牌：GanDengya.nullimage与GanDengyan.allpuke
     public Image ZXH;//读取的真心话卡面
     public Image DMX;//读取的大冒险卡面
+    public Image Normal;
 
     public Image[] minecards;//我的两张卡牌的显示，沿用allpuke来赋予
     public Image[] cpminecards;
@@ -31,9 +33,10 @@ public class ZDHDMX : UdonSharpBehaviour
     /// <summary>全部文本内容的索引</summary>
     [UdonSynced] private int[] GetZXHCardsID=new int[0];//真心话序列化文本索引
     [UdonSynced] private int[] GetDMXCardsID=new int[0];//大冒险序列化文本索引
-    [UdonSynced] private int[] ZDCardcount=new int[2];//索引的序列
+    [UdonSynced] private int[] GetNormalCardsID=new int[0];
+    [UdonSynced] private int[] ZDCardcount=new int[3];//索引的序列
     [UdonSynced] private int[] ShowZDCardsID=new int[5];//真心话展示索引
-    [UdonSynced] private bool[] IsZXH=new bool[5]; //真心话还是大冒险？
+    [UdonSynced] private int[] ZXHType = new int[5]; //真心话还是大冒险？
     [UdonSynced] private bool ReallyRandom = false;
     /// <summary>手牌文本的索引</summary>
     private int[] MinecardsID=new int[2] { -1,-1};
@@ -89,10 +92,14 @@ public class ZDHDMX : UdonSharpBehaviour
         ZDCardcount[1] = temps.Length - 1;
         GetDMXCardsID= new int[temps.Length];
         usualuseclass.SetIntOrder(ref GetDMXCardsID);
+        usualuseclass.LoadTextToString(showNormalText,ref temps);
+        ZDCardcount[2]= temps.Length - 1;
+        GetNormalCardsID= new int[temps.Length];
+        usualuseclass.SetIntOrder(ref GetNormalCardsID);
         
         ReallyRandom = false;
         usualuseclass.ResetIntToInt(ref ShowZDCardsID, -1);
-        usualuseclass.ResetBoolToBool(ref IsZXH,true);
+        usualuseclass.ResetIntToInt(ref ZXHType,0);
         ShowMyCardsID = -1;
         UsingPN = "";
         RequestSerialization();
@@ -115,19 +122,36 @@ public class ZDHDMX : UdonSharpBehaviour
             }
             else
             {
-                if (IsZXH[i])
+                switch (ZXHType[i])
                 {
-                    string[] tempZXH = new string[0];
-                    usualuseclass.LoadTextToString(showZXHText, ref tempZXH);
-                    ZXHDMXimages[i].sprite = ZXH.sprite;
-                    ZXHDMXtext[i].text = tempZXH[ShowZDCardsID[i]];
-                }
-                else
-                {
-                    string[] tempDMX = new string[0];
-                    usualuseclass.LoadTextToString(showDMXText, ref tempDMX);
-                    ZXHDMXimages[i].sprite = DMX.sprite;
-                    ZXHDMXtext[i].text = tempDMX[ShowZDCardsID[i]];
+                    case 1:
+                        {
+                            string[] tempZXH = new string[0];
+                            usualuseclass.LoadTextToString(showZXHText, ref tempZXH);
+                            ZXHDMXimages[i].sprite = ZXH.sprite;
+                            ZXHDMXtext[i].text = tempZXH[ShowZDCardsID[i]];
+                            ZXHDMXtext[i].color = new Color(66f / 255f, 66f / 255f, 0f);
+                        }
+                        break;
+                    case -1:
+                        {
+                            string[] tempDMX = new string[0];
+                            usualuseclass.LoadTextToString(showDMXText, ref tempDMX);
+                            ZXHDMXimages[i].sprite = DMX.sprite;
+                            ZXHDMXtext[i].text = tempDMX[ShowZDCardsID[i]];
+                            ZXHDMXtext[i].color = new Color(166f / 255f, 166f / 255f, 0f);
+                        }
+                        break;
+                    case 0:
+                        {
+                            string[] tempNormal = new string[0];
+                            usualuseclass.LoadTextToString(showNormalText, ref tempNormal);
+                            ZXHDMXimages[i].sprite = Normal.sprite;
+                            ZXHDMXtext[i].text = tempNormal[ShowZDCardsID[i]];
+                            ZXHDMXtext[i].color = new Color(50f / 50f, 166f / 50f, 0f);
+                        }
+                        break;
+                    default:break;
                 }
             }
             ZXHDMXimages[i].color = Color.white;
@@ -191,10 +215,10 @@ public class ZDHDMX : UdonSharpBehaviour
             int[] tempints = new int[ShowZDCardsID.Length];
             usualuseclass.SetIntArrayToIntArray(ref tempints,ShowZDCardsID,ShowZDCardsID.Length);
             int count = 0;
-            foreach (bool b in IsZXH) { if (!b) tempints[count] = -1; count++; }
-            ShowZDCardsID[nullimage] = usualuseclass.RandomWithoutExcept(0, GetZXHCardsID.Length, ShowZDCardsID);
+            foreach (int b in ZXHType) { if (b!=1) tempints[count] = -1; count++; }//对每个Type操作，
+            ShowZDCardsID[nullimage] = usualuseclass.RandomWithoutExcept(0, GetZXHCardsID.Length, tempints);
         }
-        IsZXH[nullimage] = true;
+        ZXHType[nullimage] = 1;
         RequestSerialization();
         SetShow();
     }//获取真心话卡牌
@@ -215,13 +239,37 @@ public class ZDHDMX : UdonSharpBehaviour
             int[] tempints = new int[ShowZDCardsID.Length];
             usualuseclass.SetIntArrayToIntArray(ref tempints, ShowZDCardsID, ShowZDCardsID.Length);
             int count = 0;
-            foreach (bool b in IsZXH) { if (b) tempints[count] = -1; count++; }
-            ShowZDCardsID[nullimage] = usualuseclass.RandomWithoutExcept(0, GetDMXCardsID.Length, ShowZDCardsID);
+            foreach (int b in ZXHType) { if (b!=-1) tempints[count] = -1; count++; }
+            ShowZDCardsID[nullimage] = usualuseclass.RandomWithoutExcept(0, GetDMXCardsID.Length, tempints);
         }
-        IsZXH[nullimage] = false;
+        ZXHType[nullimage] = -1;
         RequestSerialization();
         SetShow();
     }//获取大冒险卡牌
+    public void GetNormal()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+        int nullimage = 0;
+        foreach (int SCID in ShowZDCardsID) { if (SCID == -1) break; nullimage++; }
+        if (nullimage == 5) return;
+        if (!ReallyRandom)
+        {
+            ShowZDCardsID[nullimage] = GetNormalCardsID[ZDCardcount[1]];
+            if (ZDCardcount[1] == 0) ZDCardcount[1] = GetNormalCardsID.Length;
+            ZDCardcount[1]--;
+        }
+        else
+        {
+            int[] tempints = new int[ShowZDCardsID.Length];
+            usualuseclass.SetIntArrayToIntArray(ref tempints, ShowZDCardsID, ShowZDCardsID.Length);
+            int count = 0;
+            foreach (int b in ZXHType) { if (b != 0) tempints[count] = -1; count++; }
+            ShowZDCardsID[nullimage] = usualuseclass.RandomWithoutExcept(0, GetNormalCardsID.Length, tempints);
+        }
+        ZXHType[nullimage] = 0;
+        RequestSerialization();
+        SetShow();
+    }//获取普通卡牌
     public void ShowMyCard()
     {
         if(!Networking.IsOwner(gameObject)) return;

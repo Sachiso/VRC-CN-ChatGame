@@ -17,14 +17,14 @@ public class getanswer : UdonSharpBehaviour
     [UdonSynced] private int playerid;
     [UdonSynced] bool isBlue = false;//是否是GOB进行按钮，也是蓝色按钮
     [UdonSynced] bool isButton = true;//是否是按钮，非为个人面板的图标操作
-    public GameObject GORCB;//右侧check图标显示
-    public GameObject GOLCB;//左侧check图标显示
+    public GameObject[] GORCB;//右侧check图标显示
+    public GameObject[] GOLCB;//左侧check图标显示
     public GameObject AllGO;//全局getanswer显隐
     [UdonSynced] private bool isLeft = true;//左右图标显示的状态
     private void Start()
     {
-        GORCB.SetActive(true);
-        GOLCB.SetActive(false);
+        foreach (GameObject go in GORCB) go.SetActive(true);
+        foreach (GameObject go in GOLCB) go.SetActive(false);
         AllGO.SetActive(false);
         GOA.SetActive(true);
         GOB.SetActive(true);
@@ -100,14 +100,14 @@ public class getanswer : UdonSharpBehaviour
             followplayerPQA.SendCustomEvent("Close");
             if (isLeft)
             {
-                GORCB.SetActive(false);
-                GOLCB.SetActive(true);
+                foreach(GameObject go in GORCB)go.SetActive(false);
+                foreach(GameObject go in GOLCB)go.SetActive(true) ;
                 AllGO.SetActive(true);
             }
             else
             {
-                GORCB.SetActive(true);
-                GOLCB.SetActive(false);
+                foreach (GameObject go in GORCB) go.SetActive(true);
+                foreach (GameObject go in GOLCB) go.SetActive(false);
                 AllGO.SetActive(false);
             }
         }

@@ -5,6 +5,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
 using UnityEngine.UI;
+using System.Diagnostics.Eventing.Reader;
 
 public class OnceUponATime : UdonSharpBehaviour
 {
@@ -15,6 +16,7 @@ public class OnceUponATime : UdonSharpBehaviour
     public Image[] showcards;
     public TextMeshProUGUI[] showcardPN;
     public TextMeshProUGUI TMPForUPN;//显示当前讲述玩家的TMP
+    public TextMeshProUGUI TMPForTips;
     public Image nullimage;
     private int ForSelectMineCardint = -1;//存储当前玩家选择的手牌序列，-1表示没有选择
     private int[] ForSelectNTID = new int[20];//存储当前玩家手牌的ID，0是目标卡牌，1-19是普通卡牌
@@ -28,7 +30,7 @@ public class OnceUponATime : UdonSharpBehaviour
     [UdonSynced] private int[] ShowcardID = new int[5];//显示打出卡牌的ID序列存储，-1表示没有卡牌
     [UdonSynced] private string[] ShowcardPN= new string[5];//打出卡牌对应的玩家名称存储
     [UdonSynced] private int AddCardCount = 1;//加牌数量，默认为1张，可能会变成2或3张
-    [UdonSynced] private string UsingPN = "空";//当前讲述人名称，默认为空
+    [UdonSynced] private string UsingPN = "";//当前讲述人名称，默认为空
     [UdonSynced] private bool gameover = false;//游戏是否结束，默认为false
     [UdonSynced] private bool isadd = false;//是否加牌，默认为false
     public TextMeshProUGUI[] CopyToTMPforPlayerInGame;
@@ -36,6 +38,7 @@ public class OnceUponATime : UdonSharpBehaviour
     public Image[] CopyToshowcards;
     public TextMeshProUGUI[] CopyToshowcardPN;
     public TextMeshProUGUI CopyToTMPForUPN;
+    public TextMeshProUGUI CopyToTMPForTips;
     void Start()//初始化所有空数据
     {
         if (Networking.IsOwner(gameObject))
@@ -101,12 +104,14 @@ public class OnceUponATime : UdonSharpBehaviour
         Tcardcount--;
         RequestSerialization();
         Setall();
+        SetminecardForSelect(-1);
     }
     private void SetminecardForSelect(int ForSelectMCID)
     {
-        if(ForSelectMCID > MineCardscount-1) return;
+        if (ForSelectMCID > MineCardscount - 1) return;
         if (ForSelectMineCardint != ForSelectMCID)
         {
+            if (ForSelectMCID == 0 && MineCardscount > 1) return;//这里我需要的逻辑是：判断0号位是否可选，如果不可选，不操作
             ForSelectMineCardint = ForSelectMCID;
         }
         else ForSelectMineCardint = -1;
@@ -114,10 +119,53 @@ public class OnceUponATime : UdonSharpBehaviour
         {
             CopyTominecards[i].color = (minecards[i].color = Color.white);
         }
-        if (ForSelectMineCardint != -1)
+        if (MineCardscount != 1)
+        {
+            CopyTominecards[0].color = (minecards[0].color = Color.gray);
+        }
+            if (ForSelectMineCardint != -1)
         {
             CopyTominecards[ForSelectMineCardint].color = (minecards[ForSelectMineCardint].color = new Color(0xF1 / 255f, 0xA5 / 255f, 0xA5 / 255f, 1f));
         }
+        //针对引导的文字显示
+        if (ForSelectMineCardint == -1)
+        {
+            TMPForTips.text = $"手牌{MineCardscount}张，";
+            if (UsingPN == Networking.LocalPlayer.displayName) TMPForTips.text += "请继续讲述直到能够出牌";
+            else TMPForTips.text += "请等待其他人讲述到手牌对应内容";
+            
+        }
+        else
+        {
+            TMPForTips.text = $"手牌{MineCardscount}张，";
+            if (ForSelectMineCardint != 0)
+                switch (ForSelectNTID[ForSelectMineCardint])
+                {
+                    case 88:
+                    case 89:
+                    case 90:
+                    case 91:
+                        TMPForTips.text += "当前选中打断卡\n无条件获取发言权";
+                        break;
+                    case 92:
+                    case 93:
+                    case 94:
+                    case 95:
+                        TMPForTips.text += "当前选中更换卡\n获取2张，然后无条件打出除结局卡外任意一张";
+                        break;
+                    case 96:
+                    case 97:
+                    case 98:
+                    case 99:
+                        TMPForTips.text += "当前选中加量卡\n为发言人加牌，同时自己的该卡换一张，不更换牌权";
+                        break;
+                    default:
+                        TMPForTips.text += "当前选中普通卡\n当发言人说到卡牌下方文字时，可打出抢夺发言权";
+                        break;
+                }
+            else { TMPForTips.text += "当前选中结局卡\n请在将所有伏笔回收后，将故事导向结局"; }
+        }
+        CopyToTMPForTips.text = TMPForTips.text;
     }
     public void OnPlayerShowCard()
     {
@@ -243,6 +291,7 @@ public class OnceUponATime : UdonSharpBehaviour
                 break;
             default: break;
         }
+
         RequestSerialization();
         Setall();
         SetminecardForSelect(-1);
@@ -250,6 +299,7 @@ public class OnceUponATime : UdonSharpBehaviour
     public void OnPlayergetcard()//给无法继续讲述故事的人准备的过牌
     {
         if (gameover) return;
+        if (UsingPN != Networking.LocalPlayer.displayName) return;
         for (int i = 0; i < 8; i++)
         {
             if (Networking.LocalPlayer.displayName == PNInGames[i]) break;
@@ -270,11 +320,15 @@ public class OnceUponATime : UdonSharpBehaviour
             {
                 if (i == 7) { i = 0; }
                 else if (PNInGames[i + 1] == "") { i = 0; }
-                else {i++;}
+                else { i++; }
                 UsingPN = PNInGames[i];
                 break;
             }
         }
+        TMPForTips.text = $"您因为过卡而获得一张卡，手牌{MineCardscount}张";
+        CopyToTMPForTips.text = TMPForTips.text;
+        minecards[0].color = Color.gray; 
+        CopyTominecards[0].color = Color.gray; 
         RequestSerialization();
         Setall();
     }
@@ -292,6 +346,17 @@ public class OnceUponATime : UdonSharpBehaviour
                 minecards[MineCardscount].sprite = normalcards[ForSelectNTID[MineCardscount]].sprite;//这里要给左侧赋予卡牌
                 MineCardscount++;
             }
+            if (UsingPN == TMPForUPN.text)
+            {
+                TMPForTips.text = $"您被{Networking.GetOwner(gameObject).displayName}加牌了，手牌还有{MineCardscount}张";
+            }
+            else
+            {
+                TMPForTips.text = $"您被{Networking.GetOwner(gameObject).displayName}抢夺了发言权，手牌还有{MineCardscount}张";
+            }
+            CopyToTMPForTips.text = TMPForTips.text;
+            minecards[0].color = Color.gray;
+            CopyTominecards[0].color = Color.gray;
         }
         SetInGamePlayer();//更新玩家列表信息
         Setshowcards();//更新显示卡牌信息
@@ -334,6 +399,8 @@ public class OnceUponATime : UdonSharpBehaviour
                 }
             }
             TMPForUPN.text = UsingPN;//当前讲述人信息更新
+            if (UsingPN == Networking.LocalPlayer.displayName) TMPForUPN.color = Color.green;
+            else TMPForUPN.color = new Color(140f / 255f, 140f / 255f, 70f / 255f);
         }
        
     }
@@ -343,6 +410,7 @@ public class OnceUponATime : UdonSharpBehaviour
         {
             TMPforPlayerInGame[i].text = $"{i+1}.{PNInGames[i]}";
         }
+
     }
     private void CopyToWorld()
     {
@@ -364,6 +432,7 @@ public class OnceUponATime : UdonSharpBehaviour
             CopyToshowcardPN[i].text = showcardPN[i].text;
         }
         CopyToTMPForUPN.text = TMPForUPN.text;
+        CopyToTMPForUPN.color= TMPForUPN.color;
     }
    
     public void Selectminecard0() { SetminecardForSelect(0); }
