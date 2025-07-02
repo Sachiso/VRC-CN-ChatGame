@@ -148,7 +148,7 @@ public class ZDHDMX : UdonSharpBehaviour
                             usualuseclass.LoadTextToString(showNormalText, ref tempNormal);
                             ZXHDMXimages[i].sprite = Normal.sprite;
                             ZXHDMXtext[i].text = tempNormal[ShowZDCardsID[i]];
-                            ZXHDMXtext[i].color = new Color(50f / 50f, 166f / 50f, 0f);
+                            ZXHDMXtext[i].color = new Color(49f / 255f, 45f / 255f, 58f/255f);
                         }
                         break;
                     default:break;
@@ -176,6 +176,7 @@ public class ZDHDMX : UdonSharpBehaviour
             cpZXHDMXimages[i].sprite = ZXHDMXimages[i].sprite;
             cpZXHDMXimages[i].color = ZXHDMXimages[i].color;
             cpZXHDMXtext[i].text = ZXHDMXtext[i].text;
+            cpZXHDMXtext[i].color = ZXHDMXtext[i].color;
         }
         cpuingPN.text = UsingPN;
         cpSetOwnBut.color = SetOwnBut.color;

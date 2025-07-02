@@ -1,9 +1,6 @@
 ﻿using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
-using VRC.SDKBase;
-using VRC.Udon;
-using VRC_StarterKit.SampleAssets.USharp.Sound;
 
 public class PBUIset : UdonSharpBehaviour
 {

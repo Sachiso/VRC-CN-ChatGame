@@ -324,7 +324,10 @@ public class GanDengYan : UdonSharpBehaviour
         }
         else
             UsingPNid = (UsingPNid + 1) % PlayersCount;//切换到下一个玩家
-        
+        foreach (TextMeshProUGUI tips in Tips)
+        {
+            tips.text = "选择以激活提示"; tips.color = Color.white;
+        }
         RequestSerialization();
         Setall();
     }
@@ -509,6 +512,10 @@ public class GanDengYan : UdonSharpBehaviour
             PlayersCardsID[UsingPNid]=string.Join(" ", setme);
         }
         RequestSerialization();
+        foreach (TextMeshProUGUI tips in Tips)
+        {
+            tips.text = "选择以激活提示"; tips.color = Color.white;
+        }
         Setall();
     }
     public void JoinGame()
@@ -518,6 +525,10 @@ public class GanDengYan : UdonSharpBehaviour
         PlayersName[PlayersCount] = Networking.LocalPlayer.displayName;
         PlayersCount++;
         RequestSerialization();
+        foreach (TextMeshProUGUI tips in Tips)
+            {
+                tips.text = "选择以激活提示"; tips.color = Color.white;
+            }
         Setall();
     }
     public void SetNewGame()
@@ -642,6 +653,15 @@ public class GanDengYan : UdonSharpBehaviour
                 else minecards[i].color = Color.white;
             }
         }
+        int tempcount = 0;
+        foreach (var card in MySelectCardsID) { if (card == -1) tempcount++; }
+        if (tempcount == 6)
+        {
+            foreach (TextMeshProUGUI tips in Tips)
+            {
+                tips.text = "选择以激活提示"; tips.color = Color.white;
+            }
+        }
     }
     private void SetInGamePlayer()
     {
@@ -667,6 +687,8 @@ public class GanDengYan : UdonSharpBehaviour
             if (ShowPukePN[i] == -1) playersNameforCard[i].text = "";
             else playersNameforCard[i].text=PlayersName[ShowPukePN[i]];
         }
+        if (PlayersName[UsingPNid] == Networking.LocalPlayer.displayName) usingPN.color = Color.green;
+        else usingPN.color = new Color(140f / 255f, 140f / 255f, 70f / 255f);
     }
     private void CopyToWorld()
     {
@@ -685,6 +707,7 @@ public class GanDengYan : UdonSharpBehaviour
             copytoPlayersNameforCard[i].text = playersNameforCard[i].text;
         }
         copytoUingPN.text = usingPN.text;
+        copytoUingPN.color = usingPN.color;
     }
 
     private void SetminecardForSelect(int ForSelectMineCardID)
@@ -703,11 +726,19 @@ public class GanDengYan : UdonSharpBehaviour
             copytoMinecards[ForSelectMineCardID].color = minecards[ForSelectMineCardID].color;
         }
         string temps = Networking.LocalPlayer.displayName;
+        int tempcount = 0;
+        foreach (var card in MySelectCardsID) {if (card==-1)tempcount++;}
         if (usingPN.text != temps)
             foreach (TextMeshProUGUI tips in Tips)
             {
                 tips.text = "当前不该你操作"; tips.color = new Color(200f / 255f, 74f / 255f, 74f / 255f);
             }
+        else if (tempcount == 6) {
+            foreach (TextMeshProUGUI tips in Tips)
+            {
+                tips.text = "点击卡牌激活提示"; tips.color = Color.white;
+            }
+        }
         else
         {
             int forsavedlength = 0;//用于获取出牌长度
@@ -739,36 +770,36 @@ public class GanDengYan : UdonSharpBehaviour
             }
             string settips = "";
             bool canshow = false;
-            if (ShowPukePN[0]==-1||PlayersName[ShowPukePN[0]] == temps)
+            if (ShowPukePN[0] == -1 || PlayersName[ShowPukePN[0]] == temps)
             {
                 canshow = true;
-                switch(GetPukeType(savedMineSelectCardID, pukestate.None))
+                switch (GetPukeType(savedMineSelectCardID, pukestate.None))
                 {
                     case pukestate.One:
                         settips = "当前可出，牌型为：单张"; break;
-                    case pukestate.Two: 
+                    case pukestate.Two:
                         settips = "当前可出，牌型为：对子"; break;
-                    case pukestate.Three: 
+                    case pukestate.Three:
                         settips = "当前可出，牌型为：三张"; break;
-                    case pukestate.TwoTwo: 
+                    case pukestate.TwoTwo:
                         settips = "当前可出，牌型为：连对"; break;
-                    case pukestate.ThreeTwo: 
+                    case pukestate.ThreeTwo:
                         settips = "当前可出，牌型为：三带二"; break;
-                    case pukestate.BoomOne: 
+                    case pukestate.BoomOne:
                         settips = "当前可出，牌型为：四带一"; break;
-                    case pukestate.ThreeS: 
+                    case pukestate.ThreeS:
                         settips = "当前可出，牌型为：三顺子"; break;
-                    case pukestate.FourS: 
+                    case pukestate.FourS:
                         settips = "当前可出，牌型为：四顺子"; break;
-                    case pukestate.FiveS: 
+                    case pukestate.FiveS:
                         settips = "当前可出，牌型为：五顺子"; break;
-                    case pukestate.Boom: 
+                    case pukestate.Boom:
                         settips = "当前可出，牌型为：炸弹"; break;
-                    case pukestate.FiveBoom: 
+                    case pukestate.FiveBoom:
                         settips = "当前可出，牌型为：超级炸弹"; break;
-                    case pukestate.SixBoom: 
+                    case pukestate.SixBoom:
                         settips = "当前可出，牌型为：各种六张的牌型"; break;
-                    default: 
+                    default:
                         settips = "牌型不合法"; canshow = false; break;
                         //One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom
                 }
@@ -776,7 +807,7 @@ public class GanDengYan : UdonSharpBehaviour
             else
             {
                 pukestate MinePukeState = GetPukeType(savedMineSelectCardID, ShowPukeType);//获取玩家选择的牌型
-                
+
                 switch (MinePukeState)
                 {
                     case pukestate.One:
@@ -804,81 +835,91 @@ public class GanDengYan : UdonSharpBehaviour
                     case pukestate.SixBoom:
                         settips = "当前可出，牌型为：各种六张的牌型"; break;
                     default:
-                        settips = "牌型不合法"; canshow = false; break;
+                        settips = "牌型不合法"; canshow = false; return;
                         //One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom
                 }
-
-                switch (ShowPukeType)
+                if (MinePukeState != pukestate.FiveBoom && MinePukeState != pukestate.SixBoom)
                 {
-                    case pukestate.One:
-                        settips += "，场上为：单张"; break;
-                    case pukestate.Two:
-                        settips += "，场上为：对子"; break;
-                    case pukestate.Three:
-                        settips += "，场上为：三张"; break;
-                    case pukestate.TwoTwo:
-                        settips += "，场上为：连对"; break;
-                    case pukestate.ThreeTwo:
-                        settips += "，场上为：三带二"; break;
-                    case pukestate.BoomOne:
-                        settips += "，场上为：四带一"; break;
-                    case pukestate.ThreeS:
-                        settips += "，场上为：三顺子"; break;
-                    case pukestate.FourS:
-                        settips += "，场上为：四顺子"; break;
-                    case pukestate.FiveS:
-                        settips += "，场上为：五顺子"; break;
-                    case pukestate.Boom:
-                        settips += "，场上为：炸弹"; break;
-                    default:break;
-                        //One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom
-                }
-                if (MinePukeState != pukestate.None)
-                {
-                    switch (MinePukeState)
+                    switch (ShowPukeType)
                     {
+                        case pukestate.One:
+                            settips += "，场上为：单张"; break;
+                        case pukestate.Two:
+                            settips += "，场上为：对子"; break;
+                        case pukestate.Three:
+                            settips += "，场上为：三张"; break;
+                        case pukestate.TwoTwo:
+                            settips += "，场上为：连对"; break;
+                        case pukestate.ThreeTwo:
+                            settips += "，场上为：三带二"; break;
+                        case pukestate.BoomOne:
+                            settips += "，场上为：四带一"; break;
+                        case pukestate.ThreeS:
+                            settips += "，场上为：三顺子"; break;
+                        case pukestate.FourS:
+                            settips += "，场上为：四顺子"; break;
+                        case pukestate.FiveS:
+                            settips += "，场上为：五顺子"; break;
                         case pukestate.Boom:
-                            if (ShowPukeType != pukestate.Boom && ShowPukeType != pukestate.FiveBoom)
-                            {
-                                canshow = true;
-                                break;
-                            }
-                            else if (ShowPukeType == pukestate.Boom)
-                            {
-                                if (pukenumber(savedMineSelectCardID[0]) == 15 || pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1 || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
+                            settips += "，场上为：炸弹"; break;
+                        default: break;
+                            //One,Two,Three, TwoTwo,ThreeTwo,BoomOne,Boom,ThreeS,FourS,FiveS,FiveBoom,SixBoom
+                    }
+                    if (MinePukeState != pukestate.None)
+                    {
+                        switch (MinePukeState)
+                        {
+                            case pukestate.Boom:
+                                if (ShowPukeType != pukestate.Boom && ShowPukeType != pukestate.FiveBoom)
                                 {
                                     canshow = true;
                                     break;
                                 }
-                            }
-                            return;//如果对方牌比较大则不让出(判定了对方是4炸或5炸的情况与2的情况
-                        case pukestate.FiveBoom:
-                            if (ShowPukeType != pukestate.FiveBoom)
-                            {
-                                canshow = true;
-                                break;
-                            }
-                            else if (pukenumber(savedMineSelectCardID[0]) == 15 || pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1 || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
-                            {
-                                canshow = true;
-                                break;
-                            }
-                            return;
-                        default: break;
-                    }//炸弹判定完成
-                    if (MinePukeState == ShowPukeType)
+                                else if (ShowPukeType == pukestate.Boom)
+                                {
+                                    if (pukenumber(savedMineSelectCardID[0]) == 15 || pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1 || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
+                                    {
+                                        canshow = true;
+                                        break;
+                                    }
+                                }
+                                return;//如果对方牌比较大则不让出(判定了对方是4炸或5炸的情况与2的情况
+                            case pukestate.FiveBoom:
+                                if (ShowPukeType != pukestate.FiveBoom)
+                                {
+                                    canshow = true;
+                                    break;
+                                }
+                                else if (pukenumber(savedMineSelectCardID[0]) == 15 || pukenumber(savedMineSelectCardID[0]) == PlayersPukeNub[0] + 1 || (pukenumber(savedMineSelectCardID[0]) == 3 && PlayersPukeNub[0] == 15))
+                                {
+                                    canshow = true;
+                                    break;
+                                }
+                                return;
+                            default: break;
+                        }//炸弹判定完成
+                        if (MinePukeState == ShowPukeType)
+                        {
+                            if (CanIShow(savedMineSelectCardID, forsavedlength)) canshow = true;
+                        }
+                    }
+                    if (canshow) { settips += ",当前可出"; }
+                    else
                     {
-                        if (CanIShow(savedMineSelectCardID, forsavedlength)) canshow = true;
+                        settips += "\n需要刚好大1的同牌型";
+                        canshow = false;
+                        foreach (int PPNi in PlayersPukeNub) { if (PPNi == 0) { canshow = true; break; } }
+                        if (canshow) settips += ",注意辨别百搭牌joker";
+                        canshow = false;
                     }
                 }
-                if (!canshow) { settips += ",当前可出"; }
             }
             foreach (TextMeshProUGUI tips in Tips)
             {
                 tips.text = settips;
                 if (!canshow)
-                    tips.color = new Color(200f / 255f, 74f / 255f, 74f / 255f);
-                else 
+                    tips.color = new Color(200f / 255f, 144f / 255f, 74f / 255f);
+                else
                     tips.color = Color.green;
             }
         }

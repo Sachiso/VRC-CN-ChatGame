@@ -31,7 +31,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _ColorMask: 15
-    - _IsAVProVideo: 1
+    - _IsAVProVideo: 0
     - _IsCounterMirror: 1
     - _Stencil: 0
     - _StencilComp: 8
